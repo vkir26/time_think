@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass
 import pytest
 
@@ -7,14 +8,21 @@ class Task:
     task: str
     correct_answer: int
 
+    def __str__(self):
+        return self.task
+
 
 @dataclass(frozen=True, slots=True)
 class Answer:
     user_answer: int
 
+    def __eq__(self, other):
+        return self.user_answer == other.correct_answer
+
 
 def generate_task() -> list[int]:
-    return [1, 1]
+    random.seed(1)
+    return [random.randint(1, 7) for _ in range(2)]
 
 
 def get_task() -> Task:
@@ -26,16 +34,14 @@ def get_task() -> Task:
 
 
 def answer_validator(ready_task: Task, answer: Answer) -> bool:
-    if ready_task.correct_answer == answer.user_answer:
-        return True
-    return False
+    return answer.__eq__(ready_task)
 
 
 if __name__ == "__main__":
     task = get_task()
     attempts = 5
     for i in range(attempts):
-        print(task.task)
+        print(task)
         user_answer = int(input())
         if answer_validator(ready_task=task, answer=Answer(user_answer)):
             print("Correct")
@@ -55,3 +61,7 @@ def test_answer_validator(ready_task: int, answer: int, result: bool) -> None:
         )
         == result
     )
+
+
+def test_generate_task(seed: list[int]) -> None:
+    assert generate_task() == seed
