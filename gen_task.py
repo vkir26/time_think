@@ -4,24 +4,23 @@ import pytest
 
 
 @dataclass(frozen=True, slots=True)
-class Task:
-    task: str
-    correct_answer: int
-
-    def __str__(self):
-        return self.task
-
-
-@dataclass(frozen=True, slots=True)
 class Answer:
     user_answer: int
 
-    def __eq__(self, other):
-        return self.user_answer == other.correct_answer
+    def __eq__(self, other: int) -> bool:  # type: ignore[override]
+        return self.user_answer == other
+
+
+@dataclass(frozen=True, slots=True)
+class Task:
+    task: str
+    correct_answer: Answer
+
+    def __str__(self) -> str:
+        return self.task
 
 
 def generate_task() -> list[int]:
-    random.seed(1)
     return [random.randint(1, 7) for _ in range(2)]
 
 
@@ -30,11 +29,15 @@ def get_task() -> Task:
     task_condition = "{} + {}".format(*task_values)
     correct_answer = sum(task_values)
 
-    return Task(task=task_condition, correct_answer=correct_answer)
+    return Task(task=task_condition, correct_answer=Answer(correct_answer))
 
 
 def answer_validator(ready_task: Task, answer: Answer) -> bool:
-    return answer.__eq__(ready_task)
+    return ready_task.correct_answer == answer.user_answer
+
+
+def main() -> bool:
+    return answer_validator(ready_task=task, answer=Answer(user_answer))
 
 
 if __name__ == "__main__":
@@ -43,7 +46,7 @@ if __name__ == "__main__":
     for i in range(attempts):
         print(task)
         user_answer = int(input())
-        if answer_validator(ready_task=task, answer=Answer(user_answer)):
+        if main():
             print("Correct")
             break
         else:
@@ -51,17 +54,19 @@ if __name__ == "__main__":
 
 
 @pytest.mark.parametrize(
-    "ready_task, answer, result",
+    "answer_on_task, answer_user, result",
     [(1, 1, True), (1, 2, False), (5, 3, False), (7, 7, True)],
 )
-def test_answer_validator(ready_task: int, answer: int, result: bool) -> None:
+def test_answer_validator(answer_on_task: int, answer_user: int, result: bool) -> None:
     assert (
         answer_validator(
-            Task(task="None", correct_answer=ready_task), Answer(user_answer=answer)
+            Task(task="task_condition", correct_answer=Answer(answer_on_task)),
+            answer=Answer(answer_user),
         )
         == result
     )
 
 
-def test_generate_task(seed: list[int]) -> None:
-    assert generate_task() == seed
+@pytest.mark.parametrize("answer_user", [7])
+def test_generate_task(seed: None, answer_user: int) -> None:
+    assert sum(generate_task()) == answer_user
