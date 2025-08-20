@@ -1,9 +1,9 @@
 from session import run
 
 
-def main() -> str:
-    return run()
+def main() -> None:
+    run()
 
 
 if __name__ == "__main__":
-    print(main())
+    main()

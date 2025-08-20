@@ -41,5 +41,5 @@ def answer_validator(ready_task: Task, answer: Answer) -> bool:
     return ready_task.check(answer=answer)
 
 
-def main(task: Task, user_answer: int) -> bool:
+def check_answer(task: Task, user_answer: int) -> bool:
     return answer_validator(ready_task=task, answer=Answer(user_answer))
