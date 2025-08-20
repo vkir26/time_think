@@ -1,5 +1,8 @@
+from session import run
+
+
 def main() -> None:
-    print("Hello from time-think!")
+    run()
 
 
 if __name__ == "__main__":
