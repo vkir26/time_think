@@ -1,61 +1,59 @@
-from enum import StrEnum
+from enum import IntEnum
 from dataclasses import dataclass
 from core import check_answer, get_task
+from messages import SessionMessage as Message
 
 
-class Gamemode(StrEnum):
-    EASY = "легко"
-    NORMAL = "нормально"
-    HARD = "сложно"
-    SURVIVAL = "выживание"
+class ModeSelection(IntEnum):
+    EASY = 1
+    NORMAL = 2
+    HARD = 3
+    SURVIVAL = 4
 
 
 @dataclass(frozen=True, slots=True)
 class SessionParameters:
-    attempts: int
-    lives: int
+    ATTEMPTS: int
+    LIVES: int
 
 
-difficulty_parameters: dict[Gamemode, SessionParameters] = {
-    Gamemode.EASY: SessionParameters(attempts=3, lives=3),
-    Gamemode.NORMAL: SessionParameters(attempts=4, lives=2),
-    Gamemode.HARD: SessionParameters(attempts=5, lives=1),
-    Gamemode.SURVIVAL: SessionParameters(attempts=-1, lives=1),
+difficulty_parameters: dict[ModeSelection, SessionParameters] = {
+    ModeSelection.EASY: SessionParameters(ATTEMPTS=3, LIVES=3),
+    ModeSelection.NORMAL: SessionParameters(ATTEMPTS=4, LIVES=2),
+    ModeSelection.HARD: SessionParameters(ATTEMPTS=5, LIVES=1),
+    ModeSelection.SURVIVAL: SessionParameters(ATTEMPTS=-1, LIVES=1),
 }
 
 
-class Message(StrEnum):
-    START_GAME = (
-        f"Приветствуем игрок! \n"
-        f"Добро пожаловать в игру 'Время думать'\n"
-        f"Выберите сложность {[diff.value for diff in Gamemode]}"
-    )
-    END_GAME = "Игра завершилась, Ваши результаты:"
-    CORRECT = "Правильно"
-    NOT_CORRECT = "Неправильно"
-    USER_INPUT_ERROR = "Ответ должен быть числом.\nПовторите попытку ввода"
+@dataclass(frozen=True, slots=True)
+class Result:
+    CORRECT: int
+    NOT_CORRECT: int
 
 
-def get_parameters(custom_difficulty: Gamemode) -> SessionParameters:
+def get_parameters(custom_difficulty: ModeSelection) -> SessionParameters:
     return difficulty_parameters[custom_difficulty]
 
 
-def run() -> None:
+def run(select_user: int) -> Result:
     not_correct_answer = 0
     correct_answer = 0
     question_counter = 0
 
     task = get_task()
-    print(Message.START_GAME)
-    difficulty_selection = Gamemode.SURVIVAL
-    difficulty = get_parameters(difficulty_selection)
+    difficulty_selection = ModeSelection(select_user)
+    difficulty = get_parameters(ModeSelection(select_user))
     while (
-        question_counter < difficulty.attempts
-        or difficulty_selection == Gamemode.SURVIVAL
+        question_counter < difficulty.ATTEMPTS
+        or difficulty_selection == ModeSelection.SURVIVAL
     ):
-        if not_correct_answer == difficulty.lives:
+        if not_correct_answer == difficulty.LIVES:
             break
-        user_answer = int(input(f"Задание: {task}\nОтвет: "))
+        try:
+            user_answer = int(input(Message.ENTERING_RESPONSE.format(task)))
+        except ValueError:
+            print(Message.USER_INPUT_ERROR)
+            continue
         if check_answer(task, user_answer):
             print(Message.CORRECT)
             correct_answer += 1
@@ -65,8 +63,4 @@ def run() -> None:
             not_correct_answer += 1
         question_counter += 1
 
-    print(
-        f"{'=' * 15}\n{Message.END_GAME}\n"
-        f"{Message.CORRECT}: {correct_answer}\n"
-        f"{Message.NOT_CORRECT}: {not_correct_answer}"
-    )
+    return Result(CORRECT=correct_answer, NOT_CORRECT=not_correct_answer)
