@@ -1,38 +1,34 @@
 import csv
-from enum import StrEnum
 from pathlib import Path
-
-filename = Path("auth/users.csv")
-
-
-class Message(StrEnum):
-    TITLE = "[АВТОРИЗАЦИЯ]"
-    ACCOUNT_SELECTION = "Выберете аккаунт для входа:"
-    ENTRY_USERNAME = "Введите имя пользователя: "
-    ENTRY_PASSWORD = "Введите пароль: "
-    INCORRECT_PASSWORD = "Имя пользователя или пароль указаны неверно"
-    SUCCESS_AUTHORIZATION = "Успешная авторизация!"
+from dataclasses import dataclass
 
 
-def get_uuid(users: list[dict[str, str]]) -> str:
-    username = input(Message.ENTRY_USERNAME).strip()
-    password = input(Message.ENTRY_PASSWORD).strip()
-
-    for user in users:
-        if user["username"] == username and user["password"] == password:
-            print(Message.SUCCESS_AUTHORIZATION)
-            return user["uuid"]
-    print(Message.INCORRECT_PASSWORD)
-    return get_uuid(users)
-
-
-def account() -> str:
-    users = []
-    with open(filename, "r") as csvfile:
+def read_database(filepath: Path) -> list[dict[str, str]]:
+    with open(filepath, "r") as csvfile:
         reader = csv.DictReader(csvfile, delimiter=";")
-        print(f"{Message.TITLE}\n{Message.ACCOUNT_SELECTION}")
-        for number, row in enumerate(reader, 1):
-            print(f"{number}. {row['username']}")
-            users.append(row)
+        accounts = list(reader)
+    return accounts
 
-        return get_uuid(users)
+
+@dataclass(frozen=True, slots=True)
+class Accounts:
+    USERNAMES: list[str]
+
+
+def get_usernames(filepath: Path) -> Accounts:
+    accounts = read_database(filepath)
+    users = [user["username"] for user in accounts]
+    return Accounts(users)
+
+
+@dataclass(frozen=True, slots=True)
+class Account:
+    ID: str
+
+
+def authid(filepath: Path, username: str, password: str) -> Account | None:
+    accounts = read_database(filepath)
+    for account in accounts:
+        if account["username"] == username and account["password"] == password:
+            return Account(account["uuid"])
+    return None
