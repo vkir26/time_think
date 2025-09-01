@@ -11,6 +11,10 @@ class ModeSelection(IntEnum):
     SURVIVAL = 4
 
 
+def difficulty_selector(select_difficulty: int) -> ModeSelection:
+    return ModeSelection(select_difficulty)
+
+
 @dataclass(frozen=True, slots=True)
 class SessionParameters:
     ATTEMPTS: int
@@ -35,17 +39,16 @@ def get_parameters(custom_difficulty: ModeSelection) -> SessionParameters:
     return difficulty_parameters[custom_difficulty]
 
 
-def run(select_user: int) -> Result:
+def run(user_complexity: ModeSelection) -> Result:
     not_correct_answer = 0
     correct_answer = 0
     question_counter = 0
 
     task = get_task()
-    difficulty_selection = ModeSelection(select_user)
-    difficulty = get_parameters(ModeSelection(select_user))
+    difficulty = get_parameters(user_complexity)
     while (
         question_counter < difficulty.ATTEMPTS
-        or difficulty_selection == ModeSelection.SURVIVAL
+        or user_complexity is ModeSelection.SURVIVAL
     ):
         if not_correct_answer == difficulty.LIVES:
             break
