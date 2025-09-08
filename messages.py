@@ -15,12 +15,13 @@ class AuthMessage(StrEnum):
     SELECT_USER_INDEX = "Имя пользователя №: "
     USER = "Пользователь: {}"
     ENTRY_PASSWORD = "Пароль: "
-    INDEX_NOT_FOUND = "Пользователь не найден"
+    USER_NOT_FOUND = "Пользователь не найден"
     INCORRECT_PASSWORD = "Пароль указан неверно"
     SUCCESS_AUTHORIZATION = "Успешная авторизация!"
 
 
 class RegisterMessage(StrEnum):
+    NEW_USER = "Новый пользователь"
     TITLE = "[РЕГИСТРАЦИЯ]"
     INPUT_NAME = "Введите имя: "
     NAME_EXISTS = "Данное имя уже существует"
