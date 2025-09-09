@@ -11,28 +11,24 @@ class ModeSelection(IntEnum):
     SURVIVAL = 4
 
 
-def difficulty_selector(select_difficulty: int) -> ModeSelection:
-    return ModeSelection(select_difficulty)
-
-
 @dataclass(frozen=True, slots=True)
 class SessionParameters:
-    ATTEMPTS: int
-    LIVES: int
+    rounds: int | float
+    lives: int
 
 
 difficulty_parameters: dict[ModeSelection, SessionParameters] = {
-    ModeSelection.EASY: SessionParameters(ATTEMPTS=3, LIVES=3),
-    ModeSelection.NORMAL: SessionParameters(ATTEMPTS=4, LIVES=2),
-    ModeSelection.HARD: SessionParameters(ATTEMPTS=5, LIVES=1),
-    ModeSelection.SURVIVAL: SessionParameters(ATTEMPTS=-1, LIVES=1),
+    ModeSelection.EASY: SessionParameters(rounds=3, lives=3),
+    ModeSelection.NORMAL: SessionParameters(rounds=4, lives=2),
+    ModeSelection.HARD: SessionParameters(rounds=5, lives=1),
+    ModeSelection.SURVIVAL: SessionParameters(rounds=float("inf"), lives=1),
 }
 
 
 @dataclass(frozen=True, slots=True)
 class Result:
-    CORRECT: int
-    NOT_CORRECT: int
+    correct: int
+    not_correct: int
 
 
 def get_parameters(custom_difficulty: ModeSelection) -> SessionParameters:
@@ -46,11 +42,8 @@ def run(user_complexity: ModeSelection) -> Result:
 
     task = get_task()
     difficulty = get_parameters(user_complexity)
-    while (
-        question_counter < difficulty.ATTEMPTS
-        or user_complexity is ModeSelection.SURVIVAL
-    ):
-        if not_correct_answer == difficulty.LIVES:
+    while question_counter < difficulty.rounds:
+        if not_correct_answer == difficulty.lives:
             break
         try:
             user_answer = int(input(Message.ENTERING_RESPONSE.format(task)))
@@ -66,4 +59,4 @@ def run(user_complexity: ModeSelection) -> Result:
             not_correct_answer += 1
         question_counter += 1
 
-    return Result(CORRECT=correct_answer, NOT_CORRECT=not_correct_answer)
+    return Result(correct=correct_answer, not_correct=not_correct_answer)

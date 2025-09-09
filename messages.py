@@ -9,7 +9,6 @@ class GameModeMessage(Enum):
 
 
 class SessionMessage(StrEnum):
-    START_GAME = "Приветствуем игрок! \nДобро пожаловать в игру 'Время думать'"
     SELECT_DIFFICULTY = "Выберите сложность (цифрой):"
     NOT_FOUND = "Игровая сложность не найдена"
     ENTER = "Ввод: "

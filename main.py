@@ -1,21 +1,19 @@
 from messages import GameModeMessage, SessionMessage
-from session import run, difficulty_selector, ModeSelection
-
-print(SessionMessage.START_GAME)
+from session import run, ModeSelection
 
 
 def set_difficulty() -> ModeSelection:
     while True:
         try:
-            select_difficulty = int(input(SessionMessage.ENTER))
-            difficulty = difficulty_selector(select_difficulty=select_difficulty)
+            select_difficulty = ModeSelection(int(input(SessionMessage.ENTER)))
+            break
         except ValueError:
             print(SessionMessage.NOT_FOUND)
-            continue
-        print(
-            SessionMessage.SELECTED_DIFFICULTY, GameModeMessage[difficulty.name].value
-        )
-        return difficulty
+    print(
+        SessionMessage.SELECTED_DIFFICULTY,
+        GameModeMessage[select_difficulty.name].value,
+    )
+    return select_difficulty
 
 
 def main() -> None:
@@ -25,8 +23,8 @@ def main() -> None:
     user_answer = run(user_complexity=set_difficulty())
     print(
         f"{'=' * 15}\n{SessionMessage.END_GAME}\n"
-        f"{SessionMessage.CORRECT}: {user_answer.CORRECT}\n"
-        f"{SessionMessage.NOT_CORRECT}: {user_answer.NOT_CORRECT}"
+        f"{SessionMessage.CORRECT}: {user_answer.correct}\n"
+        f"{SessionMessage.NOT_CORRECT}: {user_answer.not_correct}"
     )
 
 
