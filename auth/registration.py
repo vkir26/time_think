@@ -1,17 +1,11 @@
 import csv
-from enum import Enum
 from auth.config import datafile, Accounts
 import uuid
 
 
-class NameExists(Enum):
-    EXIST = True
-    NOT_EXIST = False
-
-
-def name_is_exist(name: str) -> NameExists:
+def name_is_exist(name: str) -> bool:
     accounts = Accounts().get_usernames()
-    return NameExists(name in accounts)
+    return name not in accounts
 
 
 def register(username: str, password: str) -> None:

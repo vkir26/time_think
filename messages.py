@@ -3,10 +3,10 @@ from enum import StrEnum
 
 class AccessMenuMessage(StrEnum):
     MENU = "Выберете меню (цифрой):"
-    AUTHORIZATION = "1. Авторизоваться"
-    REGISTER = "2. Зарегистрироваться"
     INPUT = "Ввод: "
-    MENU_NOT_FOUND = "Меню не найдено, попробуйте заново"
+    MENU_NOT_FOUND = (
+        "Раздел меню недоступен или отсутствует.\nПопробуйте выбрать другой раздел"
+    )
 
 
 class AuthMessage(StrEnum):
@@ -17,6 +17,7 @@ class AuthMessage(StrEnum):
     ENTRY_PASSWORD = "Пароль: "
     USER_NOT_FOUND = "Пользователь не найден"
     INCORRECT_PASSWORD = "Пароль указан неверно"
+    ATTEMPTS_ENDED = "Использовано максимальное количество попыток входа"
     SUCCESS_AUTHORIZATION = "Успешная авторизация!"
 
 
