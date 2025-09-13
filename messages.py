@@ -1,11 +1,4 @@
-from enum import StrEnum, Enum
-
-
-class GameModeMessage(Enum):
-    EASY = "легко"
-    NORMAL = "нормально"
-    HARD = "сложно"
-    SURVIVAL = "выживание"
+from enum import StrEnum
 
 
 class SessionMessage(StrEnum):

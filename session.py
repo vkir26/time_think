@@ -10,6 +10,20 @@ class ModeSelection(IntEnum):
     HARD = 3
     SURVIVAL = 4
 
+    def message(self) -> str:
+        match self:
+            case self.EASY:
+                return "легко"
+            case self.NORMAL:
+                return "нормально"
+            case self.HARD:
+                return "сложно"
+            case self.SURVIVAL:
+                return "выживание"
+
+            case _:
+                return "сложность без названия"
+
 
 @dataclass(frozen=True, slots=True)
 class SessionParameters:
@@ -24,6 +38,10 @@ difficulty_parameters: dict[ModeSelection, SessionParameters] = {
     ModeSelection.SURVIVAL: SessionParameters(rounds=float("inf"), lives=1),
 }
 
+assert len(difficulty_parameters) == len(ModeSelection), (
+    "Укажите параметры сложности в 'difficulty_parameters'!"
+)
+
 
 @dataclass(frozen=True, slots=True)
 class Result:
@@ -32,7 +50,10 @@ class Result:
 
 
 def get_parameters(custom_difficulty: ModeSelection) -> SessionParameters:
-    return difficulty_parameters[custom_difficulty]
+    try:
+        return difficulty_parameters[custom_difficulty]
+    except KeyError:
+        return difficulty_parameters[ModeSelection.EASY]
 
 
 def run(user_complexity: ModeSelection) -> Result:
