@@ -1,40 +1,83 @@
-from enum import StrEnum, IntEnum
+from enum import IntEnum
+from dataclasses import dataclass
 from core import check_answer, get_task
+from messages import SessionMessage as Message
+from typing import assert_never
 
 
-class SessionParameters(IntEnum):
-    ATTEMPTS = 5
-    LIVES = 3
+class ModeSelection(IntEnum):
+    EASY = 1
+    NORMAL = 2
+    HARD = 3
+    SURVIVAL = 4
+
+    def message(self) -> str:
+        match self:
+            case ModeSelection.EASY:
+                return "легко"
+            case ModeSelection.NORMAL:
+                return "нормально"
+            case ModeSelection.HARD:
+                return "сложно"
+            case ModeSelection.SURVIVAL:
+                return "выживание"
+            case _ as unreachable_case:
+                assert_never(unreachable_case)
 
 
-class Message(StrEnum):
-    END_GAME = "Игра завершилась, Ваши результаты:"
-    CORRECT = "Правильно"
-    NOT_CORRECT = "Неправильно"
+@dataclass(frozen=True, slots=True)
+class SessionParameters:
+    rounds: int | float
+    lives: int
 
 
-class ErrorMessage(StrEnum):
-    USER_INPUT_ERROR = "Ответ должен быть числом.\nПовторите попытку ввода"
+difficulty_parameters: dict[ModeSelection, SessionParameters] = {
+    ModeSelection.EASY: SessionParameters(rounds=3, lives=3),
+    ModeSelection.NORMAL: SessionParameters(rounds=4, lives=2),
+    ModeSelection.HARD: SessionParameters(rounds=5, lives=1),
+    ModeSelection.SURVIVAL: SessionParameters(rounds=float("inf"), lives=1),
+}
+
+assert len(difficulty_parameters) == len(ModeSelection), (
+    "Укажите параметры сложности в 'difficulty_parameters'!"
+)
 
 
-def run() -> None:
+@dataclass(frozen=True, slots=True)
+class Result:
+    correct: int
+    not_correct: int
+
+
+def get_parameters(custom_difficulty: ModeSelection) -> SessionParameters:
+    try:
+        return difficulty_parameters[custom_difficulty]
+    except KeyError:
+        return difficulty_parameters[ModeSelection.EASY]
+
+
+def run(user_complexity: ModeSelection) -> Result:
     not_correct_answer = 0
     correct_answer = 0
+    question_counter = 0
 
     task = get_task()
-    for attempt in range(SessionParameters.ATTEMPTS):
-        if not_correct_answer != SessionParameters.LIVES:
-            user_answer = int(input(f"Задание: {task}\nОтвет: "))
-            if check_answer(task, user_answer):
-                print(Message.CORRECT)
-                correct_answer += 1
-                task = get_task()
-            else:
-                print(Message.NOT_CORRECT)
-                not_correct_answer += 1
+    difficulty = get_parameters(user_complexity)
+    while question_counter < difficulty.rounds:
+        if not_correct_answer == difficulty.lives:
+            break
+        try:
+            user_answer = int(input(Message.ENTERING_RESPONSE.format(task)))
+        except ValueError:
+            print(Message.USER_INPUT_ERROR)
+            continue
+        if check_answer(task, user_answer):
+            print(Message.CORRECT)
+            correct_answer += 1
+            task = get_task()
+        else:
+            print(Message.NOT_CORRECT)
+            not_correct_answer += 1
+        question_counter += 1
 
-    print(
-        f"{'=' * 15}\n{Message.END_GAME}\n"
-        f"{Message.CORRECT}: {correct_answer}\n"
-        f"{Message.NOT_CORRECT}: {not_correct_answer}"
-    )
+    return Result(correct=correct_answer, not_correct=not_correct_answer)
