@@ -2,6 +2,7 @@ from enum import IntEnum
 from dataclasses import dataclass
 from core import check_answer, get_task
 from messages import SessionMessage as Message
+from typing import assert_never
 
 
 class ModeSelection(IntEnum):
@@ -12,17 +13,16 @@ class ModeSelection(IntEnum):
 
     def message(self) -> str:
         match self:
-            case self.EASY:
+            case ModeSelection.EASY:
                 return "легко"
-            case self.NORMAL:
+            case ModeSelection.NORMAL:
                 return "нормально"
-            case self.HARD:
+            case ModeSelection.HARD:
                 return "сложно"
-            case self.SURVIVAL:
+            case ModeSelection.SURVIVAL:
                 return "выживание"
-
-            case _:
-                return "сложность без названия"
+            case _ as unreachable_case:
+                assert_never(unreachable_case)
 
 
 @dataclass(frozen=True, slots=True)
