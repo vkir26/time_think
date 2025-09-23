@@ -19,6 +19,7 @@ class AuthMessage(StrEnum):
     INCORRECT_PASSWORD = "Пароль указан неверно"
     ATTEMPTS_ENDED = "Использовано максимальное количество попыток входа"
     SUCCESS_AUTHORIZATION = "Успешная авторизация!"
+    KEY_NOT_FOUND = "Ключ {} не найден"
 
 
 class RegisterMessage(StrEnum):

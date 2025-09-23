@@ -1,10 +1,10 @@
 import csv
-from auth.config import datafile, Accounts
+from auth.config import datafile, AccountStorage
 import uuid
 
 
 def name_is_exist(name: str) -> bool:
-    accounts = Accounts().get_usernames()
+    accounts = AccountStorage().get_usernames()
     return name not in accounts
 
 

@@ -1,8 +1,8 @@
-from auth.config import Accounts
+from auth.config import AccountStorage
 
 
-def authid(username: str, password: str) -> bool:
-    for account in Accounts().get_accounts():
-        if account["username"] == username and account["password"] == password:
+def authenticate(user_id: str, password: str) -> bool:
+    for account in AccountStorage().get_accounts():
+        if account.uuid == user_id and account.password == password:
             return True
     return False

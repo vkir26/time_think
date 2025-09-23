@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import assert_never
 
 
 class AccessMenu(IntEnum):
@@ -7,14 +8,9 @@ class AccessMenu(IntEnum):
 
     def message(self) -> str:
         match self:
-            case self.AUTHORIZATION:
+            case AccessMenu.AUTHORIZATION:
                 return "Авторизоваться"
-            case self.REGISTER:
+            case AccessMenu.REGISTER:
                 return "Зарегистрироваться"
-
-            case _:
-                return "Название меню отсутствует"
-
-
-def menu_selector(selected_menu: int) -> AccessMenu:
-    return AccessMenu(selected_menu)
+            case _ as unreachable_case:
+                assert_never(unreachable_case)
