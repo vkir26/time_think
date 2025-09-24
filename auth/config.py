@@ -1,8 +1,6 @@
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Callable
-import functools
 
 datafile = Path("auth/users.csv")
 
@@ -20,24 +18,10 @@ class Account:
     uuid: str
 
 
-def caching[**P, T](func: Callable[P, list[T]]) -> Callable[P, list[T]]:
-    cache = {}
-
-    @functools.wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> list[T]:
-        key = tuple(func(*args, **kwargs))
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
-
-    return wrapper
-
-
 class AccountStorage:
     def __init__(self) -> None:
         self.accounts = self.get_accounts()
 
-    @caching
     def get_accounts(self) -> list[Account]:
         with open(datafile, "r") as csv_file:
             reader = csv.DictReader(csv_file, delimiter=";")
