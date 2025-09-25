@@ -29,3 +29,15 @@ class RegisterMessage(StrEnum):
     NAME_EXISTS = "Данное имя уже существует"
     INPUT_PASS = "Придумайте пароль: "
     SUCCESS_REGISTER = "Успешная регистрация!"
+
+
+class SessionMessage(StrEnum):
+    SELECT_DIFFICULTY = "Выберите сложность (цифрой):"
+    NOT_FOUND = "Игровая сложность не найдена"
+    ENTER = "Ввод: "
+    SELECTED_DIFFICULTY = "Выбранная сложность:"
+    END_GAME = "Игра завершилась, Ваши результаты:"
+    CORRECT = "Правильно"
+    NOT_CORRECT = "Неправильно"
+    USER_INPUT_ERROR = "Ответ должен быть числом.\nПовторите попытку ввода"
+    ENTERING_RESPONSE = "Задание: {}\nОтвет: "

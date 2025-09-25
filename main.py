@@ -1,6 +1,6 @@
 from enum import IntEnum
-from session import run
-from messages import AccessMenuMessage, RegisterMessage, AuthMessage
+from session import run, ModeSelection
+from messages import SessionMessage, AccessMenuMessage, RegisterMessage, AuthMessage
 from auth.config import datafile, create_datafile, AccountStorage
 from auth.access_menu import AccessMenu
 from auth.registration import register, name_is_exist
@@ -89,7 +89,35 @@ def main() -> None:
                     for input_attempt in range(1, attempts + 1):
                         password = input(AuthMessage.ENTRY_PASSWORD).strip()
                         if authentication(user_id=user_id, password=password):
-                            run()
+                            print(SessionMessage.SELECT_DIFFICULTY)
+                            for difficulty_index, difficulty_mode in enumerate(
+                                ModeSelection, 1
+                            ):
+                                print(
+                                    f"{difficulty_index}. {ModeSelection.message(difficulty_mode)}"
+                                )
+
+                            difficulty = None
+                            while True:
+                                try:
+                                    select_difficulty = int(
+                                        input(SessionMessage.ENTER).strip()
+                                    )
+                                    difficulty = ModeSelection(select_difficulty)
+                                except ValueError:
+                                    print(SessionMessage.NOT_FOUND)
+                                    continue
+                                break
+
+                            print(
+                                SessionMessage.SELECTED_DIFFICULTY, difficulty.message()
+                            )
+                            session_result = run(user_complexity=difficulty)
+                            print(
+                                f"{'=' * 15}\n{SessionMessage.END_GAME}\n"
+                                f"{SessionMessage.CORRECT}: {session_result.correct}\n"
+                                f"{SessionMessage.NOT_CORRECT}: {session_result.not_correct}"
+                            )
                             break
                         elif input_attempt == attempts:
                             print(AuthMessage.ATTEMPTS_ENDED)
