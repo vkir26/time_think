@@ -5,6 +5,8 @@ from auth.config import datafile, create_datafile, AccountStorage
 from auth.access_menu import AccessMenu
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
+from datetime import datetime as dt
+from game_statistics import write_statistics
 
 
 def menu_selection() -> int:
@@ -42,6 +44,10 @@ def authentication(user_id: str, password: str) -> bool:
 
 class AuthAttempts(IntEnum):
     ATTEMPTS = 5
+
+
+def get_datetime() -> str:
+    return dt.now().strftime("%d-%m-%Y %H:%M:%S")
 
 
 def main() -> None:
@@ -112,7 +118,17 @@ def main() -> None:
                             print(
                                 SessionMessage.SELECTED_DIFFICULTY, difficulty.message()
                             )
+                            start_session = get_datetime()
                             session_result = run(user_complexity=difficulty)
+                            end_session = get_datetime()
+                            write_statistics(
+                                user_id=user_id,
+                                session_start=start_session,
+                                session_end=end_session,
+                                difficulty=difficulty.name,
+                                correct=session_result.correct,
+                                incorrect=session_result.not_correct,
+                            )
                             print(
                                 f"{'=' * 15}\n{SessionMessage.END_GAME}\n"
                                 f"{SessionMessage.CORRECT}: {session_result.correct}\n"
