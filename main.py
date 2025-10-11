@@ -1,6 +1,6 @@
-from enum import IntEnum, Enum
+from enum import Enum
 from typing import Type, TypeVar
-from menu import Menu, SessionMenu
+from menu import MainMenu, SessionMenu
 from session import run, ModeSelection
 from messages import (
     MenuMessage,
@@ -9,7 +9,7 @@ from messages import (
     RegisterMessage,
     AuthMessage,
 )
-from auth.config import datafile, create_datafile, AccountStorage
+from auth.config import AccountStorage
 from auth.access_menu import AccessMenu
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
@@ -48,47 +48,39 @@ def authentication(user_id: str, password: str) -> bool:
     return identification
 
 
-class State(Enum):
-    MENU = Menu
+class Menu(Enum):
+    MAIN = MainMenu
     ACCESS = AccessMenu
     SESSION = SessionMenu
 
 
-class AuthAttempts(IntEnum):
-    ATTEMPTS = 5
+ATTEMPTS = 5
 
 
 def main() -> None:
-    if not datafile.exists():
-        create_datafile()
-
-    current_menu = State.MENU
-    user_registration = False
-    user_authorization = False
+    current_menu = Menu.MAIN
+    is_registered = False
+    is_authorized = False
 
     while True:
         match current_menu:
-            case State.MENU:
+            case Menu.MAIN:
                 print(MenuMessage.MENU)
-                for menu in Menu:
-                    print(f"{menu}. {Menu.message(menu)}")
-                match menu_selection(Menu):
-                    case Menu.START_GAME:
-                        current_menu = State.ACCESS
-                    case Menu.HOW_TO_PLAY:
+                for menu in MainMenu:
+                    print(f"{menu}. {MainMenu.message(menu)}")
+                match menu_selection(MainMenu):
+                    case MainMenu.START_GAME:
+                        current_menu = Menu.ACCESS
+                    case MainMenu.HOW_TO_PLAY:
                         print(MenuMessage.HOW_TO_PLAY)
-                    case Menu.LEADERS:
-                        print("Скоро...")
-                    case _:
-                        print(MenuMessage.MENU_NOT_FOUND)
 
-            case State.ACCESS:
-                if user_registration:
+            case Menu.ACCESS:
+                if is_registered:
                     menu_item = AccessMenu.REGISTER
-                    user_registration = False
-                elif user_authorization:
+                    is_registered = False
+                elif is_authorized:
                     menu_item = AccessMenu.AUTHORIZATION
-                    user_authorization = False
+                    is_authorized = False
                 else:
                     print(AccessMenuMessage.MENU)
                     for access_menu in AccessMenu:
@@ -109,9 +101,9 @@ def main() -> None:
                                     username=input_username, password=indicate_password
                                 )
                                 print(RegisterMessage.SUCCESS_REGISTER)
-                                user_authorization = True
-                        if not user_authorization:
-                            user_registration = True
+                                is_authorized = True
+                        if not is_authorized:
+                            is_registered = True
 
                     case AccessMenu.AUTHORIZATION:
                         names = [
@@ -124,30 +116,27 @@ def main() -> None:
                         select_user = input(AuthMessage.SELECT_USER_INDEX).strip()
                         if not check_index(names, select_user):
                             print(AuthMessage.USER_NOT_FOUND)
-                            user_authorization = True
+                            is_authorized = True
                             continue
 
                         user_index = int(select_user)
                         username = names[user_index]
                         if user_index == 0:
-                            user_registration = True
+                            is_registered = True
                             continue
                         if user_id := AccountStorage().get_user_id(username):
-                            current_menu = State.SESSION
+                            current_menu = Menu.SESSION
                             print(AuthMessage.USER.format(username))
-                            attempts = AuthAttempts.ATTEMPTS
-                            for input_attempt in range(1, attempts + 1):
+                            for input_attempt in range(1, ATTEMPTS + 1):
                                 password = input(AuthMessage.ENTRY_PASSWORD).strip()
                                 if authentication(user_id=user_id, password=password):
-                                    current_menu = State.SESSION
+                                    current_menu = Menu.SESSION
                                     break
-                                elif input_attempt == attempts:
+                                elif input_attempt == ATTEMPTS:
                                     print(AuthMessage.ATTEMPTS_ENDED)
-                                    current_menu = State.MENU
-                    case _:
-                        print(AccessMenuMessage.MENU_NOT_FOUND)
+                                    current_menu = Menu.MAIN
 
-            case State.SESSION:
+            case Menu.SESSION:
                 for session_menu in SessionMenu:
                     print(f"{session_menu}. {SessionMenu.message(session_menu)}")
                 match menu_selection(SessionMenu):
@@ -178,8 +167,8 @@ def main() -> None:
                         break
                     case SessionMenu.MY_STATISTICS:
                         print("Моя статистика:\nСкоро...")
-                    case _:
-                        print(SessionMessage.MENU_NOT_FOUND)
+                    case SessionMenu.LEADERS:
+                        print("Скоро...")
 
 
 if __name__ == "__main__":

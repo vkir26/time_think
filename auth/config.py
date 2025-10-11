@@ -19,6 +19,9 @@ class Account:
 
 
 class AccountStorage:
+    if not datafile.exists():
+        create_datafile()
+
     def __init__(self) -> None:
         self.accounts = self.get_accounts()
 
