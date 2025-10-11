@@ -137,7 +137,7 @@ def main() -> None:
                                 f"{SessionMessage.NOT_CORRECT}: {session_result.not_correct}"
                             )
 
-                            user_statistics = StatisticsStorage().get_my_statistic(
+                            user_statistics = StatisticsStorage().get_my_statistics(
                                 user_id=user_id
                             )
                             print("Ваша статистика:")

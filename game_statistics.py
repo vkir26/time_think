@@ -27,7 +27,7 @@ class StatisticsStorage:
         create_statistics_file()
 
     def __init__(self) -> None:
-        self.statistic = self.get_statistics
+        self.statistics = self.get_statistics
         self.datetime_format = "%d-%m-%Y %H:%M:%S"
 
     def get_statistics(self, user_id: str) -> list[UserStatistic]:
@@ -40,9 +40,9 @@ class StatisticsStorage:
                     my_statistic.append(statistical_data)
         return my_statistic
 
-    def get_my_statistic(self, user_id: str) -> list[UserStatistic]:
+    def get_my_statistics(self, user_id: str) -> list[UserStatistic]:
         return sorted(
-            self.statistic(user_id),
+            self.statistics(user_id),
             key=lambda my_statistic: datetime.strptime(
                 my_statistic.session_end, self.datetime_format
             ),
