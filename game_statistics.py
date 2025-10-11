@@ -1,31 +1,13 @@
 from pathlib import Path
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+from datetime import datetime
 
 statistics_file = Path("users_statistics.csv")
 
 
-def create_statistics_file() -> None:
-    with open(statistics_file, "w", newline="") as file:
-        writer = csv.writer(file, delimiter=";")
-        writer.writerow(
-            (
-                "user_id",
-                "session_start",
-                "session_end",
-                "difficulty",
-                "correct",
-                "incorrect",
-            )
-        )
-
-
-if not statistics_file.exists():
-    create_statistics_file()
-
-
 @dataclass(frozen=True, slots=True)
-class UserStatistics:
+class UserStatistic:
     user_id: str
     session_start: str
     session_end: str
@@ -34,44 +16,40 @@ class UserStatistics:
     incorrect: str
 
 
-class StatisticsStorage:
-    def __init__(self) -> None:
-        self.statistics = self.get_statistics()
-        self.my_statistics = self.get_my_statistics
+def create_statistics_file() -> None:
+    with open(statistics_file, "w", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+        writer.writerow((UserStatistic.__annotations__.keys()))
 
-    def get_statistics(self) -> list[UserStatistics]:
+
+class StatisticsStorage:
+    if not statistics_file.exists():
+        create_statistics_file()
+
+    def __init__(self) -> None:
+        self.statistic = self.get_statistics
+        self.datetime_format = "%d-%m-%Y %H:%M:%S"
+
+    def get_statistics(self, user_id: str) -> list[UserStatistic]:
+        my_statistic = []
         with open(statistics_file, "r") as csv_file:
             reader = csv.DictReader(csv_file, delimiter=";")
-            self.statistics = [UserStatistics(**statistics) for statistics in reader]
-        return self.statistics
+            for statistic in reader:
+                statistical_data = UserStatistic(**statistic)
+                if statistical_data.user_id == user_id:
+                    my_statistic.append(statistical_data)
+        return my_statistic
 
-    def get_my_statistics(self, user_id: str) -> list[UserStatistics]:
-        my_statistics = []
-        for statistics in self.statistics:
-            if statistics.user_id in user_id:
-                my_statistics.append(statistics)
-        return my_statistics[::-1]
-
-
-def write_statistics(
-    user_id: str,
-    session_start: str,
-    session_end: str,
-    difficulty: str,
-    correct: int,
-    incorrect: int,
-) -> None:
-    with open(statistics_file, "a", newline="") as file:
-        writer = csv.writer(file, delimiter=";")
-        writer.writerow(
-            [user_id, session_start, session_end, difficulty, correct, incorrect]
+    def get_my_statistic(self, user_id: str) -> list[UserStatistic]:
+        return sorted(
+            self.statistic(user_id),
+            key=lambda my_statistic: datetime.strptime(
+                my_statistic.session_end, self.datetime_format
+            ),
+            reverse=True,
         )
 
-
-# user_statistics = StatisticsStorage().get_my_statistics("a19b253d-be28-49b3-baab-72306c098d86")
-# print("Моя статистика:")
-# for numbering, user in enumerate(user_statistics, 1):
-#     print(
-#         f"{numbering}. Начало игры: {user.session_start} | Окончание игры: {user.session_end} | "
-#         f"Сложность: {user.difficulty} | Правильных ответов: {user.correct} | Неправильных ответов: {user.incorrect}"
-#     )
+    def write_statistics(self, stats: UserStatistic) -> None:
+        with open(statistics_file, "a", newline="") as file:
+            writer = csv.writer(file, delimiter=";")
+            writer.writerow(list(asdict(stats).values()))

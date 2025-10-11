@@ -5,8 +5,8 @@ from auth.config import datafile, create_datafile, AccountStorage
 from auth.access_menu import AccessMenu
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
-from datetime import datetime as dt
-from game_statistics import write_statistics
+from datetime import datetime
+from game_statistics import StatisticsStorage, UserStatistic
 
 
 def menu_selection() -> int:
@@ -47,7 +47,7 @@ class AuthAttempts(IntEnum):
 
 
 def get_datetime() -> str:
-    return dt.now().strftime("%d-%m-%Y %H:%M:%S")
+    return datetime.now().strftime(StatisticsStorage().datetime_format)
 
 
 def main() -> None:
@@ -121,19 +121,31 @@ def main() -> None:
                             start_session = get_datetime()
                             session_result = run(user_complexity=difficulty)
                             end_session = get_datetime()
-                            write_statistics(
-                                user_id=user_id,
-                                session_start=start_session,
-                                session_end=end_session,
-                                difficulty=difficulty.name,
-                                correct=session_result.correct,
-                                incorrect=session_result.not_correct,
+                            StatisticsStorage().write_statistics(
+                                UserStatistic(
+                                    user_id=user_id,
+                                    session_start=start_session,
+                                    session_end=end_session,
+                                    difficulty=difficulty.name,
+                                    correct=str(session_result.correct),
+                                    incorrect=str(session_result.not_correct),
+                                )
                             )
                             print(
                                 f"{'=' * 15}\n{SessionMessage.END_GAME}\n"
                                 f"{SessionMessage.CORRECT}: {session_result.correct}\n"
                                 f"{SessionMessage.NOT_CORRECT}: {session_result.not_correct}"
                             )
+
+                            user_statistics = StatisticsStorage().get_my_statistic(
+                                user_id=user_id
+                            )
+                            print("Ваша статистика:")
+                            for numbering, user in enumerate(user_statistics, 1):
+                                print(
+                                    f"{numbering}. Начало игры: {user.session_start} | Окончание игры: {user.session_end} | "
+                                    f"Сложность: {user.difficulty} | Правильных ответов: {user.correct} | Неправильных ответов: {user.incorrect}"
+                                )
                             break
                         elif input_attempt == attempts:
                             print(AuthMessage.ATTEMPTS_ENDED)
