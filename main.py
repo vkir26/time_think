@@ -13,6 +13,8 @@ from auth.config import AccountStorage
 from auth.access_menu import AccessMenu
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
+from datetime import datetime
+from game_statistics import StatisticsStorage, UserStatistic
 
 T = TypeVar("T", bound=Enum)
 
@@ -57,8 +59,13 @@ class Menu(Enum):
 ATTEMPTS = 5
 
 
+def get_datetime() -> str:
+    return datetime.now().strftime(StatisticsStorage().datetime_format)
+
+
 def main() -> None:
     current_menu = Menu.MAIN
+    id_after_authentication = ""
     is_registered = False
     is_authorized = False
 
@@ -125,11 +132,11 @@ def main() -> None:
                             is_registered = True
                             continue
                         if user_id := AccountStorage().get_user_id(username):
-                            current_menu = Menu.SESSION
                             print(AuthMessage.USER.format(username))
                             for input_attempt in range(1, ATTEMPTS + 1):
                                 password = input(AuthMessage.ENTRY_PASSWORD).strip()
                                 if authentication(user_id=user_id, password=password):
+                                    id_after_authentication = user_id
                                     current_menu = Menu.SESSION
                                     break
                                 elif input_attempt == ATTEMPTS:
@@ -158,7 +165,19 @@ def main() -> None:
                                 continue
                             break
                         print(SessionMessage.SELECTED_DIFFICULTY, difficulty.message())
+                        start_session = get_datetime()
                         session_result = run(user_complexity=difficulty)
+                        end_session = get_datetime()
+                        StatisticsStorage().write_statistics(
+                            UserStatistic(
+                                user_id=id_after_authentication,
+                                session_start=start_session,
+                                session_end=end_session,
+                                difficulty=difficulty.name,
+                                correct=str(session_result.correct),
+                                incorrect=str(session_result.not_correct),
+                            )
+                        )
                         print(
                             f"{'=' * 15}\n{SessionMessage.END_GAME}\n"
                             f"{SessionMessage.CORRECT}: {session_result.correct}\n"
@@ -166,7 +185,21 @@ def main() -> None:
                         )
                         break
                     case SessionMenu.MY_STATISTICS:
-                        print("Моя статистика:\nСкоро...")
+                        user_statistics = StatisticsStorage().get_my_statistics(
+                            user_id=id_after_authentication
+                        )
+                        print(SessionMessage.STATISTICS_HEADER)
+                        for numbering, user in enumerate(user_statistics, 1):
+                            print(
+                                f"{numbering}.",
+                                SessionMessage.PRINT_STATISTICS.format(
+                                    user.session_start,
+                                    user.session_end,
+                                    user.difficulty,
+                                    user.correct,
+                                    user.incorrect,
+                                ),
+                            )
                     case SessionMenu.LEADERS:
                         print("Скоро...")
 
