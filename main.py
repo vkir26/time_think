@@ -6,7 +6,6 @@ from session import run, ModeSelection
 from messages import (
     MenuMessage,
     SessionMessage,
-    AccessMenuMessage,
     RegisterMessage,
     AuthMessage,
 )
@@ -68,14 +67,19 @@ class Menu(Enum):
 ATTEMPTS = 5
 
 
+@dataclass
+class Session:
+    user_id: str
+
+
 def main() -> None:
     current_menu = Menu.MAIN
-    user_id: str | None = None
+    session: Session | None = None
 
     while True:
         print(current_menu, "--" * 10)
-        match current_menu:
-            case Menu.MAIN:
+        match current_menu, session:
+            case Menu.MAIN, None:
                 print(MenuMessage.MENU)
                 for menu in MainMenu:
                     print(f"{menu}. {MainMenu.message(menu)}")
@@ -87,7 +91,7 @@ def main() -> None:
                     case MainMenu.HOW_TO_PLAY:
                         print(MenuMessage.HOW_TO_PLAY)
 
-            case Menu.REGISTRATION:
+            case Menu.REGISTRATION, None:
                 print(RegisterMessage.TITLE)
                 username = input(RegisterMessage.INPUT_NAME).strip()
                 if check_username(username=username):
@@ -97,33 +101,33 @@ def main() -> None:
                         print(RegisterMessage.SUCCESS_REGISTER)
                         current_menu = Menu.SESSION
                         print(current_menu, "+++")
-            case Menu.AUTHORIZATION:
+            case Menu.AUTHORIZATION, None:
                 names = [RegisterMessage.NEW_USER] + AccountStorage().get_usernames()
                 print(f"{AuthMessage.TITLE}\n{AuthMessage.ACCOUNT_SELECTION}")
                 changer = {str(number): name for number, name in enumerate(names)}
                 for e, n in changer.items():
                     print(f"{e}. {n}")
                 inp = input(AuthMessage.SELECT_USER_INDEX).strip()
-                if (username := changer.get(inp, None)) is None:
+                if (choosed := changer.get(inp, None)) is None:
                     continue
 
-                if username == RegisterMessage.NEW_USER:
+                if choosed == RegisterMessage.NEW_USER:
                     current_menu = Menu.REGISTRATION
                     continue
 
-                if candidate := AccountStorage().get_by_username(username):
-                    print(AuthMessage.USER.format(username))
+                if candidate := AccountStorage().get_by_username(choosed):
+                    print(AuthMessage.USER.format(choosed))
                     for _ in range(ATTEMPTS):
                         password = input(AuthMessage.ENTRY_PASSWORD).strip()
                         if authentication(user_id=candidate, password=password):
-                            user_id = candidate
+                            session = Session(user_id=candidate)
                             current_menu = Menu.SESSION
                             break
                     else:
                         print(AuthMessage.ATTEMPTS_ENDED)
                         current_menu = Menu.MAIN
 
-            case Menu.SESSION:
+            case Menu.SESSION, Session() as s:
                 print(f"ПРИВЕТ {user_id}")
                 for session_menu in SessionMenu:
                     print(f"{session_menu}. {SessionMenu.message(session_menu)}")
@@ -151,7 +155,7 @@ def main() -> None:
                         end_session = datetime.now()
                         StatisticsStorage().write_statistics(
                             StatisticRow(
-                                user_id=user_id,
+                                user_id=s.user_id,
                                 session_start=start_session,
                                 session_end=end_session,
                                 difficulty=difficulty,

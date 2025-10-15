@@ -8,9 +8,9 @@ def name_is_exist(name: str) -> bool:
     return name in accounts
 
 
-def register(username: str, password: str) -> uuid.UUID:
+def register(username: str, password: str) -> str:
     user_id = uuid.uuid4()
     with open(datafile, "a", newline="") as file:
         writer = csv.writer(file, delimiter=";")
         writer.writerow([user_id, username, password])
-    return user_id
+    return str(user_id)
