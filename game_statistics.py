@@ -1,55 +1,55 @@
 from pathlib import Path
 import csv
-from dataclasses import dataclass, asdict
 from datetime import datetime
+from pydantic import BaseModel
+
+from session import ModeSelection
 
 statistics_file = Path("users_statistics.csv")
 
 
-@dataclass(frozen=True, slots=True)
-class UserStatistic:
+class StatisticRow(BaseModel):
     user_id: str
-    session_start: str
-    session_end: str
-    difficulty: str
-    correct: str
-    incorrect: str
+    session_start: datetime
+    session_end: datetime
+    difficulty: ModeSelection
+    correct: int
+    incorrect: int
 
 
 def create_statistics_file() -> None:
     with open(statistics_file, "w", newline="") as file:
         writer = csv.writer(file, delimiter=";")
-        writer.writerow((UserStatistic.__annotations__.keys()))
+        writer.writerow((StatisticRow.__annotations__.keys()))
 
 
 class StatisticsStorage:
-    if not statistics_file.exists():
-        create_statistics_file()
-
     def __init__(self) -> None:
-        self.statistics = self.get_statistics
-        self.datetime_format = "%d-%m-%Y %H:%M:%S"
+        if not statistics_file.exists():
+            create_statistics_file()
+        self.statistic = self.get_statistics()
 
-    def get_statistics(self, user_id: str) -> list[UserStatistic]:
-        my_statistic = []
+    @classmethod
+    def get_statistics(cls) -> dict[str, list[StatisticRow]]:
+        storage: dict[str, list[StatisticRow]] = {}
         with open(statistics_file, "r") as csv_file:
             reader = csv.DictReader(csv_file, delimiter=";")
             for statistic in reader:
-                statistical_data = UserStatistic(**statistic)
-                if statistical_data.user_id == user_id:
-                    my_statistic.append(statistical_data)
-        return my_statistic
+                data = StatisticRow.model_validate(statistic)
+                if storage.get(data.user_id, None) is None:
+                    storage[data.user_id] = []
+                storage[data.user_id].append(data)
+        return storage
 
-    def get_my_statistics(self, user_id: str) -> list[UserStatistic]:
+    def get_user_statistic(self, user_id: str) -> list[StatisticRow]:
         return sorted(
-            self.statistics(user_id),
-            key=lambda my_statistic: datetime.strptime(
-                my_statistic.session_end, self.datetime_format
-            ),
+            self.statistic.get(user_id, []),
+            key=lambda my_statistic: my_statistic.session_end,
             reverse=True,
         )
 
-    def write_statistics(self, stats: UserStatistic) -> None:
+    @classmethod
+    def write_statistics(cls, stats: StatisticRow) -> None:
         with open(statistics_file, "a", newline="") as file:
             writer = csv.writer(file, delimiter=";")
-            writer.writerow(list(asdict(stats).values()))
+            writer.writerow(stats.model_dump().values())

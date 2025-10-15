@@ -1,4 +1,5 @@
-from enum import Enum
+from dataclasses import dataclass
+from enum import Enum, StrEnum
 from typing import Type, TypeVar
 from menu import MainMenu, SessionMenu
 from session import run, ModeSelection
@@ -14,7 +15,7 @@ from auth.access_menu import AccessMenu
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
 from datetime import datetime
-from game_statistics import StatisticsStorage, UserStatistic
+from game_statistics import StatisticRow, StatisticsStorage
 
 T = TypeVar("T", bound=Enum)
 
@@ -29,10 +30,13 @@ def menu_selection(menu_type: Type[T]) -> T:
 
 
 def check_username(username: str) -> bool:
-    match user := name_is_exist(username):
-        case False:
-            print(RegisterMessage.NAME_EXISTS)
-    return user
+    if len(username) < 3:
+        print("Имя должно быть длиннее 3 символов")
+        return False
+    if name_is_exist(username):
+        print(RegisterMessage.NAME_EXISTS)
+        return False
+    return True
 
 
 def check_index(usernames: list[str], select_index: str) -> int:
@@ -50,100 +54,77 @@ def authentication(user_id: str, password: str) -> bool:
     return identification
 
 
+class Registration(StrEnum):
+    REG = "REG"
+
+
 class Menu(Enum):
     MAIN = MainMenu
-    ACCESS = AccessMenu
+    REGISTRATION = Registration
+    AUTHORIZATION = AccessMenu
     SESSION = SessionMenu
 
 
 ATTEMPTS = 5
 
 
-def get_datetime() -> str:
-    return datetime.now().strftime(StatisticsStorage().datetime_format)
-
-
 def main() -> None:
     current_menu = Menu.MAIN
-    id_after_authentication = ""
-    is_registered = False
-    is_authorized = False
+    user_id: str | None = None
 
     while True:
+        print(current_menu, "--" * 10)
         match current_menu:
             case Menu.MAIN:
                 print(MenuMessage.MENU)
                 for menu in MainMenu:
                     print(f"{menu}. {MainMenu.message(menu)}")
                 match menu_selection(MainMenu):
-                    case MainMenu.START_GAME:
-                        current_menu = Menu.ACCESS
+                    case MainMenu.REGISTRATION:
+                        current_menu = Menu.REGISTRATION
+                    case MainMenu.AUTHORIZATION:
+                        current_menu = Menu.AUTHORIZATION
                     case MainMenu.HOW_TO_PLAY:
                         print(MenuMessage.HOW_TO_PLAY)
 
-            case Menu.ACCESS:
-                if is_registered:
-                    menu_item = AccessMenu.REGISTER
-                    is_registered = False
-                elif is_authorized:
-                    menu_item = AccessMenu.AUTHORIZATION
-                    is_authorized = False
-                else:
-                    print(AccessMenuMessage.MENU)
-                    for access_menu in AccessMenu:
-                        print(f"{access_menu}. {AccessMenu.message(access_menu)}")
-                    menu_item = menu_selection(AccessMenu)
-                match menu_item:
-                    case AccessMenu.REGISTER:
-                        print(RegisterMessage.TITLE)
-                        input_username = input(RegisterMessage.INPUT_NAME).strip()
-                        if len(input_username) != 0 and check_username(
-                            username=input_username
-                        ):
-                            indicate_password = input(
-                                RegisterMessage.INPUT_PASS
-                            ).strip()
-                            if len(indicate_password) != 0:
-                                register(
-                                    username=input_username, password=indicate_password
-                                )
-                                print(RegisterMessage.SUCCESS_REGISTER)
-                                is_authorized = True
-                        if not is_authorized:
-                            is_registered = True
+            case Menu.REGISTRATION:
+                print(RegisterMessage.TITLE)
+                username = input(RegisterMessage.INPUT_NAME).strip()
+                if check_username(username=username):
+                    password = input(RegisterMessage.INPUT_PASS).strip()
+                    if len(password) != 0:
+                        user_id = register(username=username, password=password)
+                        print(RegisterMessage.SUCCESS_REGISTER)
+                        current_menu = Menu.SESSION
+                        print(current_menu, "+++")
+            case Menu.AUTHORIZATION:
+                names = [RegisterMessage.NEW_USER] + AccountStorage().get_usernames()
+                print(f"{AuthMessage.TITLE}\n{AuthMessage.ACCOUNT_SELECTION}")
+                changer = {str(number): name for number, name in enumerate(names)}
+                for e, n in changer.items():
+                    print(f"{e}. {n}")
+                inp = input(AuthMessage.SELECT_USER_INDEX).strip()
+                if (username := changer.get(inp, None)) is None:
+                    continue
 
-                    case AccessMenu.AUTHORIZATION:
-                        names = [
-                            RegisterMessage.NEW_USER
-                        ] + AccountStorage().get_usernames()
-                        print(f"{AuthMessage.TITLE}\n{AuthMessage.ACCOUNT_SELECTION}")
-                        for number, name in enumerate(names):
-                            print(f"{number}. {name}")
+                if username == RegisterMessage.NEW_USER:
+                    current_menu = Menu.REGISTRATION
+                    continue
 
-                        select_user = input(AuthMessage.SELECT_USER_INDEX).strip()
-                        if not check_index(names, select_user):
-                            print(AuthMessage.USER_NOT_FOUND)
-                            is_authorized = True
-                            continue
-
-                        user_index = int(select_user)
-                        username = names[user_index]
-                        if user_index == 0:
-                            is_registered = True
-                            continue
-                        if user_id := AccountStorage().get_user_id(username):
-                            print(AuthMessage.USER.format(username))
-                            for input_attempt in range(1, ATTEMPTS + 1):
-                                password = input(AuthMessage.ENTRY_PASSWORD).strip()
-                                if authentication(user_id=user_id, password=password):
-                                    id_after_authentication = user_id
-                                    current_menu = Menu.SESSION
-                                    break
-                                elif input_attempt == ATTEMPTS:
-                                    print(AuthMessage.ATTEMPTS_ENDED)
-                                    current_menu = Menu.MAIN
+                if candidate := AccountStorage().get_by_username(username):
+                    print(AuthMessage.USER.format(username))
+                    for _ in range(ATTEMPTS):
+                        password = input(AuthMessage.ENTRY_PASSWORD).strip()
+                        if authentication(user_id=candidate, password=password):
+                            user_id = candidate
+                            current_menu = Menu.SESSION
+                            break
+                    else:
+                        print(AuthMessage.ATTEMPTS_ENDED)
+                        current_menu = Menu.MAIN
 
             case Menu.SESSION:
+                print(f"ПРИВЕТ {user_id}")
                 for session_menu in SessionMenu:
                     print(f"{session_menu}. {SessionMenu.message(session_menu)}")
                 match menu_selection(SessionMenu):
@@ -165,17 +146,17 @@ def main() -> None:
                                 continue
                             break
                         print(SessionMessage.SELECTED_DIFFICULTY, difficulty.message())
-                        start_session = get_datetime()
+                        start_session = datetime.now()
                         session_result = run(user_complexity=difficulty)
-                        end_session = get_datetime()
+                        end_session = datetime.now()
                         StatisticsStorage().write_statistics(
-                            UserStatistic(
-                                user_id=id_after_authentication,
+                            StatisticRow(
+                                user_id=user_id,
                                 session_start=start_session,
                                 session_end=end_session,
-                                difficulty=difficulty.name,
-                                correct=str(session_result.correct),
-                                incorrect=str(session_result.not_correct),
+                                difficulty=difficulty,
+                                correct=session_result.correct,
+                                incorrect=session_result.not_correct,
                             )
                         )
                         print(
@@ -183,23 +164,26 @@ def main() -> None:
                             f"{SessionMessage.CORRECT}: {session_result.correct}\n"
                             f"{SessionMessage.NOT_CORRECT}: {session_result.not_correct}"
                         )
-                        break
                     case SessionMenu.MY_STATISTICS:
-                        user_statistics = StatisticsStorage().get_my_statistics(
-                            user_id=id_after_authentication
+                        user_statistics = StatisticsStorage().get_user_statistic(
+                            user_id=user_id
                         )
-                        print(SessionMessage.STATISTICS_HEADER)
-                        for numbering, user in enumerate(user_statistics, 1):
-                            print(
-                                f"{numbering}.",
-                                SessionMessage.PRINT_STATISTICS.format(
-                                    user.session_start,
-                                    user.session_end,
-                                    user.difficulty,
-                                    user.correct,
-                                    user.incorrect,
-                                ),
-                            )
+                        if len(user_statistics) > 0:
+                            print(SessionMessage.STATISTICS_HEADER)
+                            for numbering, user in enumerate(user_statistics, 1):
+                                print(
+                                    f"{numbering}.",
+                                    SessionMessage.PRINT_STATISTICS.format(
+                                        user.session_start,
+                                        user.session_end,
+                                        user.difficulty,
+                                        user.correct,
+                                        user.incorrect,
+                                    ),
+                                )
+                        else:
+                            print("Тут пусто...")
+                        print("-" * 10)
                     case SessionMenu.LEADERS:
                         print("Скоро...")
 

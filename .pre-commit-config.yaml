@@ -19,8 +19,10 @@ repos:
       # Run the formatter.
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+  - repo: local
     hooks:
       - id: mypy
-        args: [ --allow-untyped-decorators, --strict, --ignore-missing-imports, --explicit-package-bases]
+        name: mypy
+        entry: sh -c 'uv run mypy .'
+        pass_filenames: false
+        language: system
