@@ -60,3 +60,5 @@ class SessionMessage(StrEnum):
     USER_INPUT_ERROR = "Ответ должен быть числом.\nПовторите попытку ввода"
     ENTERING_RESPONSE = "Задание: {}\nОтвет: "
     MENU_NOT_FOUND = MenuMessage.MENU_NOT_FOUND
+    STATISTICS_HEADER = "Ваша статистика:"
+    PRINT_STATISTICS = "Начало игры: {} | Окончание игры: {} | Сложность: {} | Правильных ответов: {} | Неправильных ответов: {}"

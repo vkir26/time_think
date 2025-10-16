@@ -34,7 +34,7 @@ class AccountStorage:
     def get_usernames(self) -> list[str]:
         return [account.username for account in self.accounts]
 
-    def get_user_id(self, username: str) -> str | None:
+    def get_by_username(self, username: str) -> str | None:
         for account in self.accounts:
             if account.username == username:
                 return account.uuid
