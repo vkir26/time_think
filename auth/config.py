@@ -2,7 +2,7 @@ import csv
 from dataclasses import dataclass
 from pathlib import Path
 
-datafile = Path("auth/users.csv")
+datafile = Path("files/users.csv")
 
 
 def create_datafile() -> None:
@@ -19,10 +19,11 @@ class Account:
 
 
 class AccountStorage:
-    if not datafile.exists():
-        create_datafile()
-
     def __init__(self) -> None:
+        if not datafile.exists():
+            directory = datafile.parent
+            directory.mkdir(parents=True)
+            create_datafile()
         self.accounts = self.get_accounts()
 
     def get_accounts(self) -> list[Account]:
@@ -34,7 +35,7 @@ class AccountStorage:
     def get_usernames(self) -> list[str]:
         return [account.username for account in self.accounts]
 
-    def get_user_id(self, username: str) -> str | None:
+    def get_by_username(self, username: str) -> str | None:
         for account in self.accounts:
             if account.username == username:
                 return account.uuid

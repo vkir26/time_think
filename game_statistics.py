@@ -1,9 +1,8 @@
 from pathlib import Path
 import csv
 from dataclasses import dataclass, asdict
-from datetime import datetime
 
-statistics_file = Path("users_statistics.csv")
+statistics_file = Path("files/users_statistics.csv")
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,12 +22,10 @@ def create_statistics_file() -> None:
 
 
 class StatisticsStorage:
-    if not statistics_file.exists():
-        create_statistics_file()
-
     def __init__(self) -> None:
-        self.statistics = self.get_statistics
-        self.datetime_format = "%d-%m-%Y %H:%M:%S"
+        if not statistics_file.exists():
+            create_statistics_file()
+        self.statistic = self.get_statistics
 
     def get_statistics(self, user_id: str) -> list[UserStatistic]:
         my_statistic = []
@@ -42,10 +39,8 @@ class StatisticsStorage:
 
     def get_my_statistics(self, user_id: str) -> list[UserStatistic]:
         return sorted(
-            self.statistics(user_id),
-            key=lambda my_statistic: datetime.strptime(
-                my_statistic.session_end, self.datetime_format
-            ),
+            self.statistic(user_id),
+            key=lambda my_statistic: my_statistic.session_end,
             reverse=True,
         )
 
