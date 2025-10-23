@@ -19,10 +19,11 @@ class Account:
 
 
 class AccountStorage:
-    if not datafile.exists():
-        create_datafile()
-
     def __init__(self) -> None:
+        if not datafile.exists():
+            directory = datafile.parent
+            directory.mkdir(parents=True)
+            create_datafile()
         self.accounts = self.get_accounts()
 
     def get_accounts(self) -> list[Account]:

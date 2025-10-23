@@ -52,9 +52,9 @@ def names_by_index() -> dict[str, str]:
     return {str(number): name for number, name in enumerate(names)}
 
 
-def get_datetime_format(timedate: str) -> str:
+def datetime_formatting(timedate: str) -> str:
     new_format = "%d.%m.%Y %H:%M:%S"
-    datetime_format = datetime.strptime(timedate, "%Y-%m-%d %H:%M:%S.%f")
+    datetime_format = datetime.fromisoformat(timedate)
     return datetime.strftime(datetime_format, new_format)
 
 
@@ -119,13 +119,13 @@ def main() -> None:
 
                 if user_id := AccountStorage().get_by_username(selected):
                     print(AuthMessage.USER.format(selected))
-                    for _ in range(ATTEMPTS):
+                    for i in range(ATTEMPTS):
                         password = input(AuthMessage.ENTRY_PASSWORD).strip()
                         if authentication(user_id=user_id, password=password):
                             session = Session(user_id=user_id)
                             current_menu = Menu.SESSION
                             break
-                        else:
+                        elif i + 1 == ATTEMPTS:
                             print(AuthMessage.ATTEMPTS_ENDED)
                             current_menu = Menu.MAIN
 
@@ -179,8 +179,8 @@ def main() -> None:
                                 print(
                                     f"{numbering}.",
                                     SessionMessage.PRINT_STATISTICS.format(
-                                        get_datetime_format(user.session_start),
-                                        get_datetime_format(user.session_end),
+                                        datetime_formatting(user.session_start),
+                                        datetime_formatting(user.session_end),
                                         ModeSelection[user.difficulty].message(),
                                         user.correct,
                                         user.incorrect,
