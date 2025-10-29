@@ -21,12 +21,6 @@ class MenuMessage(StrEnum):
     )
 
 
-class AccessMenuMessage(StrEnum):
-    MENU = MenuMessage.MENU
-    INPUT = MenuMessage.INPUT
-    MENU_NOT_FOUND = MenuMessage.MENU_NOT_FOUND
-
-
 class AuthMessage(StrEnum):
     TITLE = "[АВТОРИЗАЦИЯ]"
     ACCOUNT_SELECTION = "Выберете аккаунт для входа (цифрой):"
@@ -44,6 +38,7 @@ class RegisterMessage(StrEnum):
     NEW_USER = "Новый пользователь"
     TITLE = "[РЕГИСТРАЦИЯ]"
     INPUT_NAME = "Введите имя: "
+    NAME_LEN = "Имя должно быть длиннее {} символов"
     NAME_EXISTS = "Данное имя уже существует"
     INPUT_PASS = "Придумайте пароль: "
     SUCCESS_REGISTER = "Успешная регистрация!"
@@ -60,3 +55,6 @@ class SessionMessage(StrEnum):
     USER_INPUT_ERROR = "Ответ должен быть числом.\nПовторите попытку ввода"
     ENTERING_RESPONSE = "Задание: {}\nОтвет: "
     MENU_NOT_FOUND = MenuMessage.MENU_NOT_FOUND
+    STATISTICS_HEADER = "Ваша статистика:"
+    STATISTICS_NOT_FOUND = "Увы, статистика не найдена :("
+    PRINT_STATISTICS = "Начало игры: {} | Окончание игры: {} | Сложность: {} | Правильных ответов: {} | Неправильных ответов: {}"
