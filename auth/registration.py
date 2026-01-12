@@ -1,16 +1,20 @@
-import csv
-from auth.config import datafile, AccountStorage
 import uuid
+from database import connect_db, Request
 
 
 def name_is_exist(name: str) -> bool:
-    accounts = AccountStorage().get_usernames()
-    return name in accounts
+    request = Request(
+        query=""" SELECT username FROM users WHERE username = ?; """,
+        param=(name,),
+    )
+    return connect_db(request=request).fetchone() is not None
 
 
 def register(username: str, password: str) -> str:
-    user_id = uuid.uuid4()
-    with open(datafile, "a", newline="") as file:
-        writer = csv.writer(file, delimiter=";")
-        writer.writerow([user_id, username, password])
-    return str(user_id)
+    user_id = str(uuid.uuid4())
+    request = Request(
+        query=""" INSERT INTO users (id, username, password) VALUES (?, ?, ?); """,
+        param=(user_id, username, password),
+    )
+    connect_db(request=request)
+    return user_id

@@ -1,6 +1,8 @@
 from enum import Enum
 from dataclasses import dataclass
 from typing import Type, TypeVar
+
+from auth.config import AccountStorage
 from menu import MainMenu, SessionMenu
 from session import run, ModeSelection
 from messages import (
@@ -9,7 +11,6 @@ from messages import (
     RegisterMessage,
     AuthMessage,
 )
-from auth.config import AccountStorage
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
 from datetime import datetime
@@ -38,18 +39,12 @@ def check_username(username: str) -> bool:
     return True
 
 
-def authentication(user_id: str, password: str) -> bool:
-    match identification := authenticate(user_id=user_id, password=password):
-        case True:
-            print(AuthMessage.SUCCESS_AUTHORIZATION)
-        case _:
-            print(AuthMessage.INCORRECT_PASSWORD)
+def authentication(username: str, password: str) -> str | None:
+    if identification := authenticate(username=username, password=password):
+        print(AuthMessage.SUCCESS_AUTHORIZATION)
+    else:
+        print(AuthMessage.INCORRECT_PASSWORD)
     return identification
-
-
-def names_by_index() -> dict[str, str]:
-    names = [RegisterMessage.NEW_USER] + AccountStorage().get_usernames()
-    return {str(number): name for number, name in enumerate(names)}
 
 
 def datetime_formatting(timedate: str) -> str:
@@ -105,7 +100,12 @@ def main() -> None:
 
             case Menu.AUTHORIZATION, None:
                 print(f"{AuthMessage.TITLE}\n{AuthMessage.ACCOUNT_SELECTION}")
-                changer = names_by_index()
+                usernames = [
+                    RegisterMessage.NEW_USER
+                ] + AccountStorage().get_usernames()
+                changer = {
+                    str(number): name for number, name in enumerate(usernames, 0)
+                }
                 for number, name in changer.items():
                     print(f"{number}. {name}")
                 user_position = input(AuthMessage.SELECT_USER_INDEX).strip()
@@ -117,17 +117,16 @@ def main() -> None:
                     current_menu = Menu.REGISTRATION
                     continue
 
-                if user_id := AccountStorage().get_by_username(selected):
-                    print(AuthMessage.USER.format(selected))
-                    for i in range(ATTEMPTS):
-                        password = input(AuthMessage.ENTRY_PASSWORD).strip()
-                        if authentication(user_id=user_id, password=password):
-                            session = Session(user_id=user_id)
-                            current_menu = Menu.SESSION
-                            break
-                        elif i + 1 == ATTEMPTS:
-                            print(AuthMessage.ATTEMPTS_ENDED)
-                            current_menu = Menu.MAIN
+                print(AuthMessage.USER.format(selected))
+                for i in range(ATTEMPTS):
+                    password = input(AuthMessage.ENTRY_PASSWORD).strip()
+                    if user_id := authentication(username=selected, password=password):
+                        session = Session(user_id=user_id)
+                        current_menu = Menu.SESSION
+                        break
+                    elif i + 1 == ATTEMPTS:
+                        print(AuthMessage.ATTEMPTS_ENDED)
+                        current_menu = Menu.MAIN
 
             case Menu.SESSION, Session() as s:
                 for session_menu in SessionMenu:
@@ -160,8 +159,8 @@ def main() -> None:
                                 session_start=str(start_session),
                                 session_end=str(end_session),
                                 difficulty=difficulty.name,
-                                correct=str(session_result.correct),
-                                incorrect=str(session_result.not_correct),
+                                correct=session_result.correct,
+                                incorrect=session_result.not_correct,
                             )
                         )
                         print(

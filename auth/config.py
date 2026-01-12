@@ -1,14 +1,5 @@
-import csv
 from dataclasses import dataclass
-from pathlib import Path
-
-datafile = Path("files/users.csv")
-
-
-def create_datafile() -> None:
-    with open(datafile, "w", newline="") as file:
-        writer = csv.writer(file, delimiter=";")
-        writer.writerow(("uuid", "username", "password"))
+from database import connect_db, Request
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,23 +11,18 @@ class Account:
 
 class AccountStorage:
     def __init__(self) -> None:
-        if not datafile.exists():
-            directory = datafile.parent
-            directory.mkdir(parents=True)
-            create_datafile()
-        self.accounts = self.get_accounts()
-
-    def get_accounts(self) -> list[Account]:
-        with open(datafile, "r") as csv_file:
-            reader = csv.DictReader(csv_file, delimiter=";")
-            self.accounts = [Account(**account) for account in reader]
-        return self.accounts
+        pass
 
     def get_usernames(self) -> list[str]:
-        return [account.username for account in self.accounts]
+        request = Request(query=""" SELECT username FROM users """, param=())
+        rows = connect_db(request=request).fetchall()
+        return [row[0] for row in rows]
 
-    def get_by_username(self, username: str) -> str | None:
-        for account in self.accounts:
-            if account.username == username:
-                return account.uuid
-        return None
+    def get_by_username(self, username: str) -> Account:
+        request = Request(
+            query=""" SELECT id, username, password FROM users WHERE username = ? """,
+            param=(username,),
+        )
+        row = connect_db(request=request).fetchone()
+        user_id, name, password = row
+        return Account(username=name, password=password, uuid=user_id)

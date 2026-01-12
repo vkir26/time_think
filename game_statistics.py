@@ -1,8 +1,5 @@
-from pathlib import Path
-import csv
-from dataclasses import dataclass, asdict
-
-statistics_file = Path("files/users_statistics.csv")
+from dataclasses import dataclass, astuple
+from database import connect_db, Request
 
 
 @dataclass(frozen=True, slots=True)
@@ -11,40 +8,27 @@ class UserStatistic:
     session_start: str
     session_end: str
     difficulty: str
-    correct: str
-    incorrect: str
-
-
-def create_statistics_file() -> None:
-    with open(statistics_file, "w", newline="") as file:
-        writer = csv.writer(file, delimiter=";")
-        writer.writerow((UserStatistic.__annotations__.keys()))
+    correct: int
+    incorrect: int
 
 
 class StatisticsStorage:
     def __init__(self) -> None:
-        if not statistics_file.exists():
-            create_statistics_file()
-        self.statistic = self.get_statistics
-
-    def get_statistics(self, user_id: str) -> list[UserStatistic]:
-        my_statistic = []
-        with open(statistics_file, "r") as csv_file:
-            reader = csv.DictReader(csv_file, delimiter=";")
-            for statistic in reader:
-                statistical_data = UserStatistic(**statistic)
-                if statistical_data.user_id == user_id:
-                    my_statistic.append(statistical_data)
-        return my_statistic
+        pass
 
     def get_my_statistics(self, user_id: str) -> list[UserStatistic]:
-        return sorted(
-            self.statistic(user_id),
-            key=lambda my_statistic: my_statistic.session_end,
-            reverse=True,
+        request = Request(
+            query=""" SELECT session_start, session_end, difficulty, correct, incorrect
+                                    FROM users_statistics
+                                    WHERE user_id = ? """,
+            param=(user_id,),
         )
+        rows = connect_db(request=request).fetchall()
+        return [UserStatistic(user_id, *row) for row in rows]
 
     def write_statistics(self, stats: UserStatistic) -> None:
-        with open(statistics_file, "a", newline="") as file:
-            writer = csv.writer(file, delimiter=";")
-            writer.writerow(list(asdict(stats).values()))
+        request = Request(
+            query=""" INSERT INTO users_statistics (user_id, session_start, session_end, difficulty, correct, incorrect) VALUES (?, ?, ?, ?, ?, ?) """,
+            param=(astuple(stats)),
+        )
+        connect_db(request=request)
