@@ -1,5 +1,5 @@
 import uuid
-from database import connect_db, Request
+from app.database import connect_db, Request
 
 
 def name_is_exist(name: str) -> bool:

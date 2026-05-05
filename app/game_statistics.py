@@ -1,5 +1,5 @@
 from dataclasses import dataclass, astuple
-from database import connect_db, Request
+from app.database import connect_db, Request
 
 
 @dataclass(frozen=True, slots=True)

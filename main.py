@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from typing import Type, TypeVar
 
 from auth.config import AccountStorage
-from menu import MainMenu, SessionMenu
-from session import run, ModeSelection
-from messages import (
+from app.menu import MainMenu, SessionMenu
+from app.session import run, ModeSelection
+from app.messages import (
     MenuMessage,
     SessionMessage,
     RegisterMessage,
@@ -14,7 +14,7 @@ from messages import (
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
 from datetime import datetime
-from game_statistics import StatisticsStorage, UserStatistic
+from app.game_statistics import StatisticsStorage, UserStatistic
 
 T = TypeVar("T", bound=Enum)
 

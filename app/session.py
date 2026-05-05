@@ -1,7 +1,7 @@
 from enum import IntEnum
 from dataclasses import dataclass
-from core import check_answer, get_task
-from messages import SessionMessage as Message
+from app.core import check_answer, get_task
+from app.messages import SessionMessage as Message
 from typing import assert_never
 
 
