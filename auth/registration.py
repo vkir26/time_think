@@ -10,7 +10,7 @@ def name_is_exist(name: str) -> bool:
     return connect_db(request=request).fetchone() is not None
 
 
-def register(username: str, password: str) -> str:
+def register(username: str, password: str | int) -> str:
     user_id = str(uuid.uuid4())
     request = Request(
         query=""" INSERT INTO users (id, username, password) VALUES (?, ?, ?); """,
