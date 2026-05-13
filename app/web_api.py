@@ -1,7 +1,10 @@
 from fastapi import FastAPI, APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
+
+from auth.config import AccountStorage
 from auth.registration import register, name_is_exist
-from app.messages import MenuMessage, RegisterMessage
+from auth.authorization import authenticate
+from app.messages import MenuMessage, RegisterMessage, AuthMessage
 
 app = FastAPI()
 
@@ -23,7 +26,7 @@ class RegisterAccountResponse(BaseModel):
     success_message: str
 
 
-@router_v1.post("/register")
+@router_v1.post("/signup")
 def register_account(account: RegisterAccount) -> RegisterAccountResponse:
     username = account.username
     if name_is_exist(name=username):
@@ -34,6 +37,34 @@ def register_account(account: RegisterAccount) -> RegisterAccountResponse:
     password = account.password
     register(username=username, password=password)
     return RegisterAccountResponse(success_message=RegisterMessage.SUCCESS_REGISTER)
+
+
+class AuthAccount(BaseModel):
+    username: str = Field(min_length=3, max_length=15)
+    password: str | int = Field(min_length=5, max_length=15)
+
+
+class AuthResponse(BaseModel):
+    message: str
+
+
+@router_v1.post("/signin")
+def authorization(account: AuthAccount) -> AuthResponse:
+    username = account.username
+    password = account.password
+
+    if username in AccountStorage().get_usernames():
+        if authenticate(username=username, password=password):
+            return AuthResponse(message=AuthMessage.SUCCESS_AUTHORIZATION)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=AuthMessage.INCORRECT_PASSWORD,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=AuthMessage.USER_NOT_FOUND
+        )
 
 
 @router_v1.get("/how_to_play")
