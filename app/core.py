@@ -5,12 +5,12 @@ from builtins import object
 
 @dataclass(frozen=True, slots=True)
 class Answer:
-    _answer: int
+    answer: int
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Answer):
             raise NotImplementedError
-        return self._answer == other._answer
+        return self.answer == other.answer
 
 
 @dataclass(frozen=True, slots=True)

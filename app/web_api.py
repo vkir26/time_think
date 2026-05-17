@@ -1,6 +1,8 @@
-from fastapi import FastAPI, APIRouter, HTTPException, status
+from fastapi import FastAPI, APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 
+from app.core import get_task, Task
+from app.session import ModeSelection, difficulty_parameters, SessionParameters
 from auth.config import AccountStorage
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
@@ -70,6 +72,27 @@ def authorization(account: AuthAccount) -> AuthResponse:
 @router_v1.get("/how_to_play")
 def how_to_play() -> dict[str, MenuMessage]:
     return {"message": MenuMessage.HOW_TO_PLAY}
+
+
+class SessionMode(BaseModel):
+    difficulty: ModeSelection = Field(default=ModeSelection.EASY)
+
+
+class SessionData(BaseModel):
+    question: Task = Field(default_factory=get_task)
+
+
+class SessionResponse(BaseModel):
+    question: Task
+    difficulty: SessionParameters
+
+
+@router_v1.post("/start")
+def start_session(mode: SessionMode = Depends()) -> SessionResponse:
+    session = SessionData()
+    return SessionResponse(
+        question=session.question, difficulty=difficulty_parameters[mode.difficulty]
+    )
 
 
 app.include_router(router_v1)

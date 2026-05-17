@@ -35,7 +35,7 @@ difficulty_parameters: dict[ModeSelection, SessionParameters] = {
     ModeSelection.EASY: SessionParameters(rounds=3, lives=3),
     ModeSelection.NORMAL: SessionParameters(rounds=4, lives=2),
     ModeSelection.HARD: SessionParameters(rounds=5, lives=1),
-    ModeSelection.SURVIVAL: SessionParameters(rounds=float("inf"), lives=1),
+    ModeSelection.SURVIVAL: SessionParameters(rounds=999999999, lives=1),
 }
 
 assert len(difficulty_parameters) == len(ModeSelection), (
