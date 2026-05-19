@@ -57,14 +57,14 @@ def get_parameters(custom_difficulty: ModeSelection) -> SessionParameters:
 
 
 def run(user_complexity: ModeSelection) -> Result:
-    not_correct_answer = 0
-    correct_answer = 0
+    wrong_answers = 0
+    correct_answers = 0
     question_counter = 0
 
     task = get_task()
     difficulty = get_parameters(user_complexity)
     while question_counter < difficulty.rounds:
-        if not_correct_answer == difficulty.lives:
+        if wrong_answers == difficulty.lives:
             break
         try:
             user_answer = int(input(Message.ENTERING_RESPONSE.format(task)))
@@ -73,11 +73,11 @@ def run(user_complexity: ModeSelection) -> Result:
             continue
         if check_answer(task, user_answer):
             print(Message.CORRECT)
-            correct_answer += 1
+            correct_answers += 1
             task = get_task()
         else:
             print(Message.NOT_CORRECT)
-            not_correct_answer += 1
+            wrong_answers += 1
         question_counter += 1
 
-    return Result(correct=correct_answer, not_correct=not_correct_answer)
+    return Result(correct=correct_answers, not_correct=wrong_answers)

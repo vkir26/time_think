@@ -87,12 +87,30 @@ class SessionResponse(BaseModel):
     difficulty: SessionParameters
 
 
-@router_v1.post("/start")
-def start_session(mode: SessionMode = Depends()) -> SessionResponse:
-    session = SessionData()
+sessions = {}
+
+
+@router_v1.post("/start/{user}")
+def start_session(user: str, mode: SessionMode = Depends()) -> SessionResponse:
+    session = SessionData(question=get_task())
+
+    sessions[user] = session
+
     return SessionResponse(
         question=session.question, difficulty=difficulty_parameters[mode.difficulty]
     )
+
+
+class SessionAnswer(BaseModel):
+    answer: int
+
+
+@router_v1.post("/answer/{user}")
+def answer(user: str, user_answer: SessionAnswer) -> bool:
+    session = sessions[user]
+    correct_answer = session.question.correct_answer
+
+    return correct_answer.answer == user_answer.answer
 
 
 app.include_router(router_v1)
