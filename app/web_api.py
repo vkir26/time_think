@@ -83,11 +83,11 @@ class SessionData(BaseModel):
 
 
 class SessionResponse(BaseModel):
-    question: Task
+    question: str
     difficulty: SessionParameters
 
 
-sessions = {}
+sessions: dict[str, SessionData] = {}
 
 
 @router_v1.post("/start/{user}")
@@ -97,7 +97,8 @@ def start_session(user: str, mode: SessionMode = Depends()) -> SessionResponse:
     sessions[user] = session
 
     return SessionResponse(
-        question=session.question, difficulty=difficulty_parameters[mode.difficulty]
+        question=session.question.task,
+        difficulty=difficulty_parameters[mode.difficulty],
     )
 
 
