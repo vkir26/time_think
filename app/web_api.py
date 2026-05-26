@@ -21,7 +21,7 @@ router_v1 = APIRouter(prefix="/v1")
 
 class RegisterAccount(BaseModel):
     username: str = Field(min_length=3, max_length=15)
-    password: str | int = Field(min_length=5, max_length=15)
+    password: str = Field(min_length=5, max_length=15)
 
 
 class RegisterAccountResponse(BaseModel):
@@ -43,7 +43,7 @@ def register_account(account: RegisterAccount) -> RegisterAccountResponse:
 
 class AuthAccount(BaseModel):
     username: str = Field(min_length=3, max_length=15)
-    password: str | int = Field(min_length=5, max_length=15)
+    password: str = Field(min_length=5, max_length=15)
 
 
 class AuthResponse(BaseModel):
