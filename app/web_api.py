@@ -6,7 +6,7 @@ from app.session import ModeSelection, difficulty_parameters, SessionParameters
 from auth.config import AccountStorage
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
-from app.messages import MenuMessage, RegisterMessage, AuthMessage
+from app.messages import MenuMessage, RegisterMessage, AuthMessage, SessionMessage
 
 app = FastAPI()
 
@@ -80,6 +80,11 @@ class SessionMode(BaseModel):
 
 class SessionData(BaseModel):
     question: Task = Field(default_factory=get_task)
+    difficulty: SessionParameters
+
+    correct_answers: int = 0
+    wrong_answers: int = 0
+    question_counter: int = 0
 
 
 class SessionResponse(BaseModel):
@@ -92,13 +97,13 @@ sessions: dict[str, SessionData] = {}
 
 @router_v1.post("/start/{user}")
 def start_session(user: str, mode: SessionMode = Depends()) -> SessionResponse:
-    session = SessionData(question=get_task())
-
+    difficulty_level = difficulty_parameters[mode.difficulty]
+    session = SessionData(question=get_task(), difficulty=difficulty_level)
     sessions[user] = session
 
     return SessionResponse(
         question=session.question.task,
-        difficulty=difficulty_parameters[mode.difficulty],
+        difficulty=difficulty_level,
     )
 
 
@@ -106,12 +111,45 @@ class SessionAnswer(BaseModel):
     answer: int
 
 
+class AnswerResponse(BaseModel):
+    correct: bool
+    correct_answers: int
+    wrong_answers: int
+    question: str
+
+
 @router_v1.post("/answer/{user}")
-def answer(user: str, user_answer: SessionAnswer) -> bool:
+def answer(
+    user: str, user_answer: SessionAnswer
+) -> dict[str, str | int] | AnswerResponse:
     session = sessions[user]
     correct_answer = session.question.correct_answer
 
-    return correct_answer.answer == user_answer.answer
+    if session.question_counter >= session.difficulty.rounds:
+        return {
+            "message": SessionMessage.END_GAME,
+            "correct": session.correct_answers,
+            "wrong": session.wrong_answers,
+        }
+    if session.wrong_answers >= session.difficulty.lives:
+        return {"message": "Закончились жизни"}
+
+    correct = correct_answer.answer == user_answer.answer
+
+    if correct:
+        session.correct_answers += 1
+        session.question = get_task()
+    else:
+        session.wrong_answers += 1
+
+    session.question_counter += 1
+
+    return AnswerResponse(
+        correct=correct,
+        correct_answers=session.correct_answers,
+        wrong_answers=session.wrong_answers,
+        question=session.question.task,
+    )
 
 
 app.include_router(router_v1)
