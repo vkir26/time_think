@@ -47,7 +47,7 @@ class AuthAccount(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    message: str
+    user_id: str
 
 
 @router_v1.post("/signin")
@@ -56,8 +56,9 @@ def authorization(account: AuthAccount) -> AuthResponse:
     password = account.password
 
     if username in AccountStorage().get_usernames():
-        if authenticate(username=username, password=password):
-            return AuthResponse(message=AuthMessage.SUCCESS_AUTHORIZATION)
+        user_id: str | None = authenticate(username=username, password=password)
+        if user_id:
+            return AuthResponse(user_id=user_id)
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -95,11 +96,13 @@ class SessionResponse(BaseModel):
 sessions: dict[str, SessionData] = {}
 
 
-@router_v1.post("/start/{user}")
-def start_session(user: str, mode: SessionMode = Depends()) -> SessionResponse:
+@router_v1.post("/start")
+def start_session(
+    account: AuthResponse = Depends(authorization), mode: SessionMode = Depends()
+) -> SessionResponse:
     difficulty_level = difficulty_parameters[mode.difficulty]
     session = SessionData(question=get_task(), difficulty=difficulty_level)
-    sessions[user] = session
+    sessions[account.user_id] = session
 
     return SessionResponse(
         question=session.question.task,
@@ -118,11 +121,11 @@ class AnswerResponse(BaseModel):
     question: str
 
 
-@router_v1.post("/answer/{user}")
+@router_v1.post("/answer")
 def answer(
-    user: str, user_answer: SessionAnswer
+    user_answer: SessionAnswer, account: AuthResponse = Depends(authorization)
 ) -> dict[str, str | int] | AnswerResponse:
-    session = sessions[user]
+    session = sessions[account.user_id]
     correct_answer = session.question.correct_answer
 
     if session.question_counter >= session.difficulty.rounds:
