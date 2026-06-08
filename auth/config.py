@@ -2,6 +2,26 @@ import os
 from dotenv import load_dotenv
 from dataclasses import dataclass
 from app.database import connect_db, Request
+from datetime import datetime, timezone, timedelta
+from jose import jwt
+
+ALGORITHM = "HS256"
+
+
+def jwt_secret_key() -> str:
+    load_dotenv()
+    jwt_key = os.environ["JWT_SECRET_KEY"]
+    return jwt_key
+
+
+def create_access_token(user_id: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(hours=1)
+    payload = {"sub": user_id, "exp": expire}
+    load_dotenv()
+    jwt_data = str(
+        jwt.encode(claims=payload, key=jwt_secret_key(), algorithm=ALGORITHM)
+    )
+    return jwt_data
 
 
 def peppered_password(password: str) -> str:
@@ -24,7 +44,7 @@ class AccountStorage:
     def get_usernames(self) -> list[str]:
         request = Request(
             query=""" SELECT username
-                                    FROM users """,
+                      FROM users """,
             param=(),
         )
         rows = connect_db(request=request).fetchall()
