@@ -10,6 +10,7 @@ dependencies = [
     "fastapi[standard]>=0.136.1",
     "pre-commit>=4.6.0",
     "pytest>=8.4.1",
+    "python-jose[cryptography]>=3.5.0",
 ]
 
 [dependency-groups]
