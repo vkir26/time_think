@@ -39,7 +39,7 @@ def check_username(username: str) -> bool:
     return True
 
 
-def authentication(username: str, password: str | int) -> str | None:
+def authentication(username: str, password: str) -> str | None:
     if identification := authenticate(username=username, password=password):
         print(AuthMessage.SUCCESS_AUTHORIZATION)
     else:
