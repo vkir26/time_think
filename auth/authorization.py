@@ -1,14 +1,12 @@
-from auth.config import AccountStorage, peppered_password
+from auth.config import Account
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 
-def authenticate(username: str, password: str) -> str | None:
-    account = AccountStorage().get_by_username(username=username)
+def authenticate(password: str, account: Account) -> str | None:
     ph = PasswordHasher()
-    hashed_password = peppered_password(password)
     try:
-        ph.verify(account.password, hashed_password)
+        ph.verify(account.password, password)
         return account.uuid
     except VerifyMismatchError:
         return None

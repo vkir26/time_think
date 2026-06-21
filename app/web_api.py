@@ -6,7 +6,13 @@ from app.core import get_task, Task
 from app.session import ModeSelection, difficulty_parameters, SessionParameters
 from app.messages import MenuMessage, RegisterMessage, AuthMessage, SessionMessage
 
-from auth.config import AccountStorage, create_access_token, jwt_secret_key, ALGORITHM
+from auth.config import (
+    AccountStorage,
+    peppered_password,
+    create_access_token,
+    jwt_secret_key,
+    ALGORITHM,
+)
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
 from jose import jwt, JWTError
@@ -64,32 +70,35 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(SECURITY))
 
         user_id = payload.get("sub")
         if user_id is None:
-            raise HTTPException(401)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
         return str(user_id)
 
     except JWTError:
-        raise HTTPException(status_code=401, detail="Невалидный токен")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Невалидный токен"
+        )
 
 
 @router_v1.post("/signin")
-def authorization(account: AuthAccount) -> AuthResponse:
-    username = account.username
-    password = account.password
+def authorization(credentials: AuthAccount) -> AuthResponse:
+    username = credentials.username
+    password = peppered_password(credentials.password)
 
-    if username in AccountStorage().get_usernames():
-        user_id: str | None = authenticate(username=username, password=password)
-        if user_id:
-            access_token = create_access_token(user_id=user_id)
-            return AuthResponse(access_token=access_token, token_type="bearer")
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=AuthMessage.INCORRECT_PASSWORD,
-            )
-    else:
+    account = AccountStorage().get_by_username(username=username)
+    if account is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=AuthMessage.USER_NOT_FOUND
+        )
+
+    user_id: str | None = authenticate(password=password, account=account)
+    if user_id:
+        access_token = create_access_token(user_id=user_id)
+        return AuthResponse(access_token=access_token, token_type="bearer")
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=AuthMessage.INCORRECT_PASSWORD,
         )
 
 

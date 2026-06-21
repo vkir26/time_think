@@ -38,19 +38,7 @@ class Account:
 
 
 class AccountStorage:
-    def __init__(self) -> None:
-        pass
-
-    def get_usernames(self) -> list[str]:
-        request = Request(
-            query=""" SELECT username
-                      FROM users """,
-            param=(),
-        )
-        rows = connect_db(request=request).fetchall()
-        return [row[0] for row in rows]
-
-    def get_by_username(self, username: str) -> Account:
+    def get_by_username(self, username: str) -> Account | None:
         request = Request(
             query=""" SELECT id, username, password
                       FROM users
@@ -58,5 +46,7 @@ class AccountStorage:
             param=(username,),
         )
         row = connect_db(request=request).fetchone()
-        user_id, name, password = row
-        return Account(username=name, password=password, uuid=user_id)
+        if row:
+            user_id, name, password = row
+            return Account(username=name, password=password, uuid=user_id)
+        return None
