@@ -2,7 +2,7 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Type, TypeVar
 
-from auth.config import AccountStorage
+from auth.config import AccountStorage, Account, peppered_password
 from app.menu import MainMenu, SessionMenu
 from app.session import run, ModeSelection
 from app.messages import (
@@ -39,8 +39,8 @@ def check_username(username: str) -> bool:
     return True
 
 
-def authentication(username: str, password: str) -> str | None:
-    if identification := authenticate(username=username, password=password):
+def authentication(account: Account, password: str) -> str | None:
+    if identification := authenticate(password=password, account=account):
         print(AuthMessage.SUCCESS_AUTHORIZATION)
     else:
         print(AuthMessage.INCORRECT_PASSWORD)
@@ -99,34 +99,49 @@ def main() -> None:
                         current_menu = Menu.SESSION
 
             case Menu.AUTHORIZATION, None:
-                print(f"{AuthMessage.TITLE}\n{AuthMessage.ACCOUNT_SELECTION}")
-                usernames = [
-                    RegisterMessage.NEW_USER
-                ] + AccountStorage().get_usernames()
+                print(f"{AuthMessage.TITLE}\n{AuthMessage.SELECTING_AUTH_SECTION}")
+                intermediate_menu = [RegisterMessage.NEW_USER] + [
+                    AuthMessage.ENTER_USERNAME
+                ]
                 changer = {
-                    str(number): name for number, name in enumerate(usernames, 0)
+                    str(number): name
+                    for number, name in enumerate(intermediate_menu, 0)
                 }
                 for number, name in changer.items():
                     print(f"{number}. {name}")
-                user_position = input(AuthMessage.SELECT_USER_INDEX).strip()
-                if (selected := changer.get(user_position, None)) is None:
-                    print(AuthMessage.USER_NOT_FOUND)
-                    continue
 
-                if selected == RegisterMessage.NEW_USER:
-                    current_menu = Menu.REGISTRATION
-                    continue
+                submenu_number = input(AuthMessage.SELECT_SUBMENU).strip()
+                match changer.get(submenu_number, None):
+                    case AuthMessage.ENTER_USERNAME:
+                        username = str(input(RegisterMessage.INPUT_NAME))
+                        account = AccountStorage().get_by_username(username=username)
+                        if account is None:
+                            print(AuthMessage.USER_NOT_FOUND)
+                            current_menu = Menu.AUTHORIZATION
+                            continue
 
-                print(AuthMessage.USER.format(selected))
-                for i in range(ATTEMPTS):
-                    password = input(AuthMessage.ENTRY_PASSWORD).strip()
-                    if user_id := authentication(username=selected, password=password):
-                        session = Session(user_id=user_id)
-                        current_menu = Menu.SESSION
-                        break
-                    elif i + 1 == ATTEMPTS:
-                        print(AuthMessage.ATTEMPTS_ENDED)
-                        current_menu = Menu.MAIN
+                        print(AuthMessage.USER.format(username))
+                        for i in range(ATTEMPTS):
+                            password = peppered_password(
+                                input(AuthMessage.ENTRY_PASSWORD).strip()
+                            )
+                            if user_id := authentication(
+                                account=account, password=password
+                            ):
+                                session = Session(user_id=user_id)
+                                current_menu = Menu.SESSION
+                                break
+                            elif i + 1 == ATTEMPTS:
+                                print(AuthMessage.ATTEMPTS_ENDED)
+                                current_menu = Menu.MAIN
+
+                    case RegisterMessage.NEW_USER:
+                        current_menu = Menu.REGISTRATION
+                        continue
+
+                    case None:
+                        print(MenuMessage.MENU_NOT_FOUND)
+                        continue
 
             case Menu.SESSION, Session() as s:
                 for session_menu in SessionMenu:

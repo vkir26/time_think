@@ -23,8 +23,9 @@ class MenuMessage(StrEnum):
 
 class AuthMessage(StrEnum):
     TITLE = "[АВТОРИЗАЦИЯ]"
-    ACCOUNT_SELECTION = "Выберете аккаунт для входа (цифрой):"
-    SELECT_USER_INDEX = "Имя пользователя №: "
+    SELECTING_AUTH_SECTION = "Выберете раздел меню (цифрой):"
+    ENTER_USERNAME = "Ввести имя пользователя"
+    SELECT_SUBMENU = "Раздел меню №: "
     USER = "Пользователь: {}"
     ENTRY_PASSWORD = "Пароль: "
     USER_NOT_FOUND = "Пользователь не найден"
@@ -37,7 +38,7 @@ class AuthMessage(StrEnum):
 class RegisterMessage(StrEnum):
     NEW_USER = "Новый пользователь"
     TITLE = "[РЕГИСТРАЦИЯ]"
-    INPUT_NAME = "Введите имя: "
+    INPUT_NAME = "Введите имя пользователя: "
     NAME_LEN = "Имя должно быть длиннее {} символов"
     NAME_EXISTS = "Данное имя уже существует"
     INPUT_PASS = "Придумайте пароль: "
