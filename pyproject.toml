@@ -11,6 +11,7 @@ dependencies = [
     "pre-commit>=4.6.0",
     "pytest>=8.4.1",
     "python-jose[cryptography]>=3.5.0",
+    "types-python-jose>=3.5.0.20260408",
 ]
 
 [dependency-groups]
