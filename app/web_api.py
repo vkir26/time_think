@@ -2,6 +2,8 @@ from fastapi import FastAPI, APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 
+from enum import StrEnum
+
 from app.core import get_task, Task
 from app.session import ModeSelection, difficulty_parameters, SessionParameters
 from app.messages import MenuMessage, RegisterMessage, AuthMessage, SessionMessage
@@ -99,12 +101,18 @@ def how_to_play() -> dict[str, MenuMessage]:
     return {"message": MenuMessage.HOW_TO_PLAY}
 
 
+class SessionStatus(StrEnum):
+    ACTIVE = "Active"
+    INACTIVE = "Inactive"
+
+
 def check_active_session(user_id: str) -> tuple[str, int, int] | None:
     request = Request(
         query=""" SELECT task, rounds, lives
                   FROM game_sessions
-                  WHERE user_id = ? AND is_active = ? """,
-        param=(user_id, True),
+                  WHERE user_id = ?
+                    AND is_active = ? """,
+        param=(user_id, SessionStatus.ACTIVE),
     )
     session_data: tuple[str, int, int] | None = connect_db(request=request).fetchone()
 
@@ -140,7 +148,7 @@ def start_session(
     session = SessionData(question=get_task(), difficulty=difficulty_level)
     request = Request(
         query=""" INSERT INTO game_sessions (user_id, task, correct_answer, rounds, lives, is_active)
-                                VALUES (?, ?, ?, ?, ?, ?)
+                  VALUES (?, ?, ?, ?, ?, ?)
               """,
         param=(
             user_id,
@@ -148,7 +156,7 @@ def start_session(
             session.question.correct_answer.answer,
             session.difficulty.rounds,
             session.difficulty.lives,
-            True,
+            SessionStatus.ACTIVE,
         ),
     )
     connect_db(request=request)
@@ -186,9 +194,16 @@ def gen_new_task(user_id: str) -> Task:
     new_task = get_task()
     request = Request(
         query=""" UPDATE game_sessions
-                  SET task = ?, correct_answer = ?
-                  WHERE user_id = ? AND is_active = ? """,
-        param=(new_task.task, new_task.correct_answer.answer, user_id, True),
+                  SET task           = ?,
+                      correct_answer = ?
+                  WHERE user_id = ?
+                    AND is_active = ? """,
+        param=(
+            new_task.task,
+            new_task.correct_answer.answer,
+            user_id,
+            SessionStatus.ACTIVE,
+        ),
     )
     connect_db(request=request)
 
@@ -205,9 +220,9 @@ class AnswerResponse(BaseModel):
 def session_end(user_id: str) -> None:
     request = Request(
         query=""" UPDATE game_sessions
-                                SET is_active = ?
-                                WHERE user_id = ? """,
-        param=(False, user_id),
+                  SET is_active = ?
+                  WHERE user_id = ? """,
+        param=(SessionStatus.INACTIVE, user_id),
     )
     connect_db(request=request)
 
@@ -219,8 +234,9 @@ def answer(
     request = Request(
         query=""" SELECT task, correct_answer, rounds, lives, correct_answers, wrong_answers, question_counter
                   FROM game_sessions
-                  WHERE user_id = ? AND is_active = ? """,
-        param=(user_id, True),
+                  WHERE user_id = ?
+                    AND is_active = ? """,
+        param=(user_id, SessionStatus.ACTIVE),
     )
     session_data = connect_db(request=request).fetchall()
     session = session_validate(session_data=session_data)
@@ -235,15 +251,33 @@ def answer(
             session.correct_answer = new_task.correct_answer.answer
 
         request = Request(
-            query=""" UPDATE game_sessions SET correct_answers = ?, question_counter = ? WHERE user_id = ? AND is_active = ? """,
-            param=(session.correct_answers, session.question_counter, user_id, True),
+            query=""" UPDATE game_sessions
+                      SET correct_answers  = ?,
+                          question_counter = ?
+                      WHERE user_id = ?
+                        AND is_active = ? """,
+            param=(
+                session.correct_answers,
+                session.question_counter,
+                user_id,
+                SessionStatus.ACTIVE,
+            ),
         )
     else:
         session.question_counter += 1
         session.wrong_answers += 1
         request = Request(
-            query=""" UPDATE game_sessions SET wrong_answers = ?, question_counter = ? WHERE user_id = ? AND is_active = ? """,
-            param=(session.wrong_answers, session.question_counter, user_id, True),
+            query=""" UPDATE game_sessions
+                      SET wrong_answers    = ?,
+                          question_counter = ?
+                      WHERE user_id = ?
+                        AND is_active = ? """,
+            param=(
+                session.wrong_answers,
+                session.question_counter,
+                user_id,
+                SessionStatus.ACTIVE,
+            ),
         )
     connect_db(request=request)
 
