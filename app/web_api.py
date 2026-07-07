@@ -181,11 +181,11 @@ class UserSession(BaseModel):
     question_counter: int
 
 
-def session_validate(session_data: list[tuple[str, int]]) -> UserSession:
+def session_validate(session_data: tuple[str, int]) -> UserSession:
     current_session = {}
     session_fields = list(UserSession.model_fields.keys())
     for i in range(len(session_fields)):
-        current_session[session_fields[i]] = session_data[0][i]
+        current_session[session_fields[i]] = session_data[i]
 
     return UserSession.model_validate(current_session)
 
@@ -238,7 +238,12 @@ def answer(
                     AND is_active = ? """,
         param=(user_id, SessionStatus.ACTIVE),
     )
-    session_data = connect_db(request=request).fetchall()
+    session_data = connect_db(request=request).fetchone()
+    if session_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=SessionMessage.SESSION_NOT_FOUND,
+        )
     session = session_validate(session_data=session_data)
 
     correct = session.correct_answer == user_answer.answer
