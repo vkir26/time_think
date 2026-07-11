@@ -47,7 +47,8 @@ class RegisterMessage(StrEnum):
 
 class SessionMessage(StrEnum):
     SELECT_DIFFICULTY = "Выберите сложность (цифрой):"
-    NOT_FOUND = "Игровая сложность не найдена"
+    SESSION_NOT_FOUND = "Активная сессия не найдена"
+    DIFFICULTY_NOT_FOUND = "Игровая сложность не найдена"
     ENTER = "Ввод: "
     SELECTED_DIFFICULTY = "Выбранная сложность:"
     END_GAME = "Игра завершилась, Ваши результаты:"

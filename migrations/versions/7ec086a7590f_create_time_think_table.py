@@ -27,6 +27,20 @@ def upgrade() -> None:
         "incorrect INTEGER,"
         "FOREIGN KEY (user_id) REFERENCES users(id));"
     )
+    op.execute(
+        "CREATE TABLE IF NOT EXISTS game_sessions ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "user_id TEXT NOT NULL,"
+        "task TEXT NOT NULL,"
+        "correct_answer INTEGER NOT NULL,"
+        "rounds INTEGER NOT NULL,"
+        "lives INTEGER NOT NULL,"
+        "correct_answers INTEGER DEFAULT 0 NOT NULL,"
+        "wrong_answers INTEGER DEFAULT 0 NOT NULL,"
+        "question_counter INTEGER DEFAULT 0 NOT NULL,"
+        "is_active INTEGER DEFAULT 0 NOT NULL,"
+        "FOREIGN KEY (user_id) REFERENCES users(id));"
+    )
 
 
 def downgrade() -> None:

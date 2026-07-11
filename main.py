@@ -161,7 +161,7 @@ def main() -> None:
                                 )
                                 difficulty = ModeSelection(select_difficulty)
                             except ValueError:
-                                print(SessionMessage.NOT_FOUND)
+                                print(SessionMessage.DIFFICULTY_NOT_FOUND)
                                 continue
                             break
                         print(SessionMessage.SELECTED_DIFFICULTY, difficulty.message())

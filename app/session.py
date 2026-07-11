@@ -27,7 +27,7 @@ class ModeSelection(IntEnum):
 
 @dataclass(frozen=True, slots=True)
 class SessionParameters:
-    rounds: int | float
+    rounds: int
     lives: int
 
 
