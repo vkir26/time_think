@@ -31,7 +31,7 @@ def greet() -> dict[str, str]:
 router_v1 = APIRouter(prefix="/v1")
 
 
-class RegisterAccount(BaseModel):
+class AccountCredentials(BaseModel):
     username: str = Field(min_length=3, max_length=15)
     password: str = Field(min_length=5, max_length=15)
 
@@ -41,7 +41,7 @@ class RegisterAccountResponse(BaseModel):
 
 
 @router_v1.post("/signup")
-def register_account(account: RegisterAccount) -> RegisterAccountResponse:
+def register_account(account: AccountCredentials) -> RegisterAccountResponse:
     username = account.username
     if name_is_exist(name=username):
         raise HTTPException(
@@ -51,11 +51,6 @@ def register_account(account: RegisterAccount) -> RegisterAccountResponse:
     password = account.password
     register(username=username, password=password)
     return RegisterAccountResponse(success_message=RegisterMessage.SUCCESS_REGISTER)
-
-
-class AuthAccount(BaseModel):
-    username: str = Field(min_length=3, max_length=15)
-    password: str = Field(min_length=5, max_length=15)
 
 
 class AuthResponse(BaseModel):
@@ -73,8 +68,10 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(SECURITY))
 
         user_id = payload.get("sub")
         if user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="ID пользователя не найден",
+            )
         return str(user_id)
 
     except JWTError:
@@ -84,7 +81,7 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(SECURITY))
 
 
 @router_v1.post("/signin")
-def authorization(credentials: AuthAccount) -> AuthResponse:
+def authorization(credentials: AccountCredentials) -> AuthResponse:
     username = credentials.username
     password = peppered_password(credentials.password)
 
@@ -95,14 +92,13 @@ def authorization(credentials: AuthAccount) -> AuthResponse:
         )
 
     user_id: str | None = authenticate(password=password, account=account)
-    if user_id:
-        access_token = create_access_token(user_id=user_id)
-        return AuthResponse(access_token=access_token, token_type="bearer")
-    else:
+    if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=AuthMessage.INCORRECT_PASSWORD,
         )
+    access_token = create_access_token(user_id=user_id)
+    return AuthResponse(access_token=access_token, token_type="bearer")
 
 
 @router_v1.get("/how_to_play")
@@ -191,11 +187,11 @@ class UserSession(BaseModel):
 
 
 def session_validate(session_data: tuple[str, int]) -> UserSession:
-    current_session = {}
     session_fields = list(UserSession.model_fields.keys())
-    for i in range(len(session_fields)):
-        current_session[session_fields[i]] = session_data[i]
+    if len(session_data) != len(session_fields):
+        raise ValueError("Некорректные данные сессии")
 
+    current_session = dict(zip(session_fields, session_data))
     return UserSession.model_validate(current_session)
 
 
@@ -256,8 +252,8 @@ def answer(
     session = session_validate(session_data=session_data)
 
     correct = session.correct_answer == user_answer.answer
+    session.question_counter += 1
     if correct:
-        session.question_counter += 1
         session.correct_answers += 1
         if session.question_counter != session.rounds:
             new_task = gen_new_task(user_id=user_id)
@@ -278,7 +274,6 @@ def answer(
             ),
         )
     else:
-        session.question_counter += 1
         session.wrong_answers += 1
         request = Request(
             query=""" UPDATE game_sessions
