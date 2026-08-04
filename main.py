@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import Enum, StrEnum
 from dataclasses import dataclass
 from typing import Type, TypeVar
 
 from auth.config import AccountStorage, Account, peppered_password
-from app.menu import MainMenu, SessionMenu
+from app.menu import MainMenu, AuthSubmenu, SessionMenu
 from app.session import run, ModeSelection
 from app.messages import (
     MenuMessage,
@@ -15,6 +15,18 @@ from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
 from datetime import datetime
 from app.game_statistics import StatisticsStorage, UserStatistic
+
+
+def show_main_menu() -> None:
+    print(MenuMessage.MENU)
+    for menu in MainMenu:
+        print(f"{menu}. {MainMenu.message(menu)}")
+
+
+def show_session_menu() -> None:
+    for session_menu in SessionMenu:
+        print(f"{session_menu}. {SessionMenu.message(session_menu)}")
+
 
 T = TypeVar("T", bound=Enum)
 
@@ -39,12 +51,70 @@ def check_username(username: str) -> bool:
     return True
 
 
+@dataclass(frozen=True, slots=True)
+class Session:
+    user_id: str
+
+
+def handle_registration() -> Session | None:
+    print(RegisterMessage.TITLE)
+    username = input(RegisterMessage.INPUT_NAME).strip()
+    if check_username(username=username):
+        password = input(RegisterMessage.INPUT_PASS).strip()
+        if len(password) != 0:
+            session = Session(register(username=username, password=password))
+            print(RegisterMessage.SUCCESS_REGISTER)
+            return session
+    return None
+
+
+class AuthResult(StrEnum):
+    SUCCESS = "success"
+    GO_REGISTER = "go_register"
+    FAILED = "failed"
+    RETRY = "retry"
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorizationOutcome:
+    result: AuthResult
+    session: Session | None = None
+
+
 def authentication(account: Account, password: str) -> str | None:
     if identification := authenticate(password=password, account=account):
         print(AuthMessage.SUCCESS_AUTHORIZATION)
     else:
         print(AuthMessage.INCORRECT_PASSWORD)
     return identification
+
+
+def handle_authorization() -> AuthorizationOutcome:
+    print(f"{AuthMessage.TITLE}\n{AuthMessage.SELECTING_AUTH_SECTION}")
+    for menu in AuthSubmenu:
+        print(f"{menu}. {menu.message()}")
+
+    match menu_selection(AuthSubmenu):
+        case AuthSubmenu.NEW_USER:
+            return AuthorizationOutcome(result=AuthResult.GO_REGISTER)
+        case AuthSubmenu.ENTER_USERNAME:
+            username = str(input(RegisterMessage.INPUT_NAME))
+            account = AccountStorage().get_by_username(username=username)
+
+            if account is None:
+                print(AuthMessage.USER_NOT_FOUND)
+                return AuthorizationOutcome(result=AuthResult.RETRY)
+
+            print(AuthMessage.USER.format(username))
+            for i in range(ATTEMPTS):
+                password = peppered_password(input(AuthMessage.ENTRY_PASSWORD).strip())
+                if user_id := authentication(account=account, password=password):
+                    return AuthorizationOutcome(
+                        result=AuthResult.SUCCESS, session=Session(user_id=user_id)
+                    )
+                elif i + 1 == ATTEMPTS:
+                    return AuthorizationOutcome(result=AuthResult.FAILED)
+    return AuthorizationOutcome(result=AuthResult.RETRY)
 
 
 def datetime_formatting(timedate: str) -> str:
@@ -60,11 +130,6 @@ class Menu(Enum):
     SESSION = SessionMenu
 
 
-@dataclass(frozen=True, slots=True)
-class Session:
-    user_id: str
-
-
 ATTEMPTS = 5
 
 
@@ -75,9 +140,7 @@ def main() -> None:
     while True:
         match current_menu, session:
             case Menu.MAIN, None:
-                print(MenuMessage.MENU)
-                for menu in MainMenu:
-                    print(f"{menu}. {MainMenu.message(menu)}")
+                show_main_menu()
                 match menu_selection(MainMenu):
                     case MainMenu.REGISTRATION:
                         current_menu = Menu.REGISTRATION
@@ -87,65 +150,26 @@ def main() -> None:
                         print(MenuMessage.HOW_TO_PLAY)
 
             case Menu.REGISTRATION, None:
-                print(RegisterMessage.TITLE)
-                username = input(RegisterMessage.INPUT_NAME).strip()
-                if check_username(username=username):
-                    password = input(RegisterMessage.INPUT_PASS).strip()
-                    if len(password) != 0:
-                        session = Session(
-                            register(username=username, password=password)
-                        )
-                        print(RegisterMessage.SUCCESS_REGISTER)
-                        current_menu = Menu.SESSION
+                registered = handle_registration()
+                if registered is not None:
+                    session = registered
+                    current_menu = Menu.SESSION
 
             case Menu.AUTHORIZATION, None:
-                print(f"{AuthMessage.TITLE}\n{AuthMessage.SELECTING_AUTH_SECTION}")
-                intermediate_menu = [RegisterMessage.NEW_USER] + [
-                    AuthMessage.ENTER_USERNAME
-                ]
-                changer = {
-                    str(number): name
-                    for number, name in enumerate(intermediate_menu, 0)
-                }
-                for number, name in changer.items():
-                    print(f"{number}. {name}")
-
-                submenu_number = input(AuthMessage.SELECT_SUBMENU).strip()
-                match changer.get(submenu_number, None):
-                    case AuthMessage.ENTER_USERNAME:
-                        username = str(input(RegisterMessage.INPUT_NAME))
-                        account = AccountStorage().get_by_username(username=username)
-                        if account is None:
-                            print(AuthMessage.USER_NOT_FOUND)
-                            current_menu = Menu.AUTHORIZATION
-                            continue
-
-                        print(AuthMessage.USER.format(username))
-                        for i in range(ATTEMPTS):
-                            password = peppered_password(
-                                input(AuthMessage.ENTRY_PASSWORD).strip()
-                            )
-                            if user_id := authentication(
-                                account=account, password=password
-                            ):
-                                session = Session(user_id=user_id)
-                                current_menu = Menu.SESSION
-                                break
-                            elif i + 1 == ATTEMPTS:
-                                print(AuthMessage.ATTEMPTS_ENDED)
-                                current_menu = Menu.MAIN
-
-                    case RegisterMessage.NEW_USER:
+                outcome = handle_authorization()
+                match outcome.result:
+                    case AuthResult.SUCCESS:
+                        session = outcome.session
+                        current_menu = Menu.SESSION
+                    case AuthResult.GO_REGISTER:
                         current_menu = Menu.REGISTRATION
-                        continue
-
-                    case None:
-                        print(MenuMessage.MENU_NOT_FOUND)
+                    case AuthResult.FAILED:
+                        current_menu = Menu.MAIN
+                    case AuthResult.RETRY:
                         continue
 
             case Menu.SESSION, Session() as s:
-                for session_menu in SessionMenu:
-                    print(f"{session_menu}. {SessionMenu.message(session_menu)}")
+                show_session_menu()
                 match menu_selection(SessionMenu):
                     case SessionMenu.PLAY:
                         print(SessionMessage.SELECT_DIFFICULTY)
