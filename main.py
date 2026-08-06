@@ -23,11 +23,6 @@ def show_main_menu() -> None:
         print(f"{menu}. {MainMenu.message(menu)}")
 
 
-def show_session_menu() -> None:
-    for session_menu in SessionMenu:
-        print(f"{session_menu}. {SessionMenu.message(session_menu)}")
-
-
 T = TypeVar("T", bound=Enum)
 
 
@@ -49,6 +44,12 @@ def check_username(username: str) -> bool:
         print(RegisterMessage.NAME_EXISTS)
         return False
     return True
+
+
+def datetime_formatting(timedate: str) -> str:
+    new_format = "%d.%m.%Y %H:%M:%S"
+    datetime_format = datetime.fromisoformat(timedate)
+    return datetime.strftime(datetime_format, new_format)
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,10 +118,74 @@ def handle_authorization() -> AuthorizationOutcome:
     return AuthorizationOutcome(result=AuthResult.RETRY)
 
 
-def datetime_formatting(timedate: str) -> str:
-    new_format = "%d.%m.%Y %H:%M:%S"
-    datetime_format = datetime.fromisoformat(timedate)
-    return datetime.strftime(datetime_format, new_format)
+def show_session_menu() -> None:
+    for session_menu in SessionMenu:
+        print(f"{session_menu}. {SessionMenu.message(session_menu)}")
+
+
+def play_game(user_id: str) -> None:
+    print(SessionMessage.SELECT_DIFFICULTY)
+    for difficulty_mode in ModeSelection:
+        print(f"{difficulty_mode}. {ModeSelection.message(difficulty_mode)}")
+    difficulty = None
+    while True:
+        try:
+            select_difficulty = int(input(SessionMessage.ENTER).strip())
+            difficulty = ModeSelection(select_difficulty)
+        except ValueError:
+            print(SessionMessage.DIFFICULTY_NOT_FOUND)
+            continue
+        break
+    print(SessionMessage.SELECTED_DIFFICULTY, difficulty.message())
+    start_session = datetime.now()
+    session_result = run(user_complexity=difficulty)
+    end_session = datetime.now()
+    StatisticsStorage().write_statistics(
+        UserStatistic(
+            user_id=user_id,
+            session_start=str(start_session),
+            session_end=str(end_session),
+            difficulty=difficulty.name,
+            correct=session_result.correct,
+            incorrect=session_result.not_correct,
+        )
+    )
+    print(
+        f"{'=' * 15}\n{SessionMessage.END_GAME}\n"
+        f"{SessionMessage.CORRECT}: {session_result.correct}\n"
+        f"{SessionMessage.NOT_CORRECT}: {session_result.not_correct}"
+    )
+
+
+def show_my_statistics(user_id: str) -> None:
+    user_statistics = StatisticsStorage().get_my_statistics(user_id=user_id)
+    if len(user_statistics) > 0:
+        print(SessionMessage.STATISTICS_HEADER)
+        for numbering, user in enumerate(user_statistics, 1):
+            print(
+                f"{numbering}.",
+                SessionMessage.PRINT_STATISTICS.format(
+                    datetime_formatting(user.session_start),
+                    datetime_formatting(user.session_end),
+                    ModeSelection[user.difficulty].message(),
+                    user.correct,
+                    user.incorrect,
+                ),
+            )
+        print("#" * 35)
+    else:
+        print(SessionMessage.STATISTICS_NOT_FOUND)
+
+
+def handle_session(session: Session) -> None:
+    show_session_menu()
+    match menu_selection(SessionMenu):
+        case SessionMenu.PLAY:
+            play_game(user_id=session.user_id)
+        case SessionMenu.MY_STATISTICS:
+            show_my_statistics(user_id=session.user_id)
+        case SessionMenu.LEADERS:
+            print("Скоро...")
 
 
 class Menu(Enum):
@@ -159,6 +224,8 @@ def main() -> None:
                 outcome = handle_authorization()
                 match outcome.result:
                     case AuthResult.SUCCESS:
+                        if outcome.session is None:
+                            raise RuntimeError("Session not found")
                         session = outcome.session
                         current_menu = Menu.SESSION
                     case AuthResult.GO_REGISTER:
@@ -169,66 +236,7 @@ def main() -> None:
                         continue
 
             case Menu.SESSION, Session() as s:
-                show_session_menu()
-                match menu_selection(SessionMenu):
-                    case SessionMenu.PLAY:
-                        print(SessionMessage.SELECT_DIFFICULTY)
-                        for difficulty_mode in ModeSelection:
-                            print(
-                                f"{difficulty_mode}. {ModeSelection.message(difficulty_mode)}"
-                            )
-                        difficulty = None
-                        while True:
-                            try:
-                                select_difficulty = int(
-                                    input(SessionMessage.ENTER).strip()
-                                )
-                                difficulty = ModeSelection(select_difficulty)
-                            except ValueError:
-                                print(SessionMessage.DIFFICULTY_NOT_FOUND)
-                                continue
-                            break
-                        print(SessionMessage.SELECTED_DIFFICULTY, difficulty.message())
-                        start_session = datetime.now()
-                        session_result = run(user_complexity=difficulty)
-                        end_session = datetime.now()
-                        StatisticsStorage().write_statistics(
-                            UserStatistic(
-                                user_id=s.user_id,
-                                session_start=str(start_session),
-                                session_end=str(end_session),
-                                difficulty=difficulty.name,
-                                correct=session_result.correct,
-                                incorrect=session_result.not_correct,
-                            )
-                        )
-                        print(
-                            f"{'=' * 15}\n{SessionMessage.END_GAME}\n"
-                            f"{SessionMessage.CORRECT}: {session_result.correct}\n"
-                            f"{SessionMessage.NOT_CORRECT}: {session_result.not_correct}"
-                        )
-                    case SessionMenu.MY_STATISTICS:
-                        user_statistics = StatisticsStorage().get_my_statistics(
-                            user_id=s.user_id
-                        )
-                        if len(user_statistics) > 0:
-                            print(SessionMessage.STATISTICS_HEADER)
-                            for numbering, user in enumerate(user_statistics, 1):
-                                print(
-                                    f"{numbering}.",
-                                    SessionMessage.PRINT_STATISTICS.format(
-                                        datetime_formatting(user.session_start),
-                                        datetime_formatting(user.session_end),
-                                        ModeSelection[user.difficulty].message(),
-                                        user.correct,
-                                        user.incorrect,
-                                    ),
-                                )
-                            print("#" * 35)
-                        else:
-                            print(SessionMessage.STATISTICS_NOT_FOUND)
-                    case SessionMenu.LEADERS:
-                        print("Скоро...")
+                handle_session(session=s)
 
 
 if __name__ == "__main__":
