@@ -26,13 +26,15 @@ def show_main_menu() -> None:
 T = TypeVar("T", bound=Enum)
 
 
-def menu_selection(menu_type: Type[T]) -> T:
+def menu_selection(
+    menu_type: Type[T], error_message: str = MenuMessage.MENU_NOT_FOUND
+) -> T:
     while True:
         try:
             select_menu = int(input(MenuMessage.INPUT))
             return menu_type(select_menu)
         except ValueError:
-            print(MenuMessage.MENU_NOT_FOUND)
+            print(error_message)
 
 
 def check_username(username: str) -> bool:
@@ -123,19 +125,17 @@ def show_session_menu() -> None:
         print(f"{session_menu}. {SessionMenu.message(session_menu)}")
 
 
-def play_game(user_id: str) -> None:
+def show_difficulty_menu() -> None:
     print(SessionMessage.SELECT_DIFFICULTY)
     for difficulty_mode in ModeSelection:
         print(f"{difficulty_mode}. {ModeSelection.message(difficulty_mode)}")
-    difficulty = None
-    while True:
-        try:
-            select_difficulty = int(input(SessionMessage.ENTER).strip())
-            difficulty = ModeSelection(select_difficulty)
-        except ValueError:
-            print(SessionMessage.DIFFICULTY_NOT_FOUND)
-            continue
-        break
+
+
+def play_game(user_id: str) -> None:
+    show_difficulty_menu()
+    difficulty = menu_selection(
+        menu_type=ModeSelection, error_message=SessionMessage.DIFFICULTY_NOT_FOUND
+    )
     print(SessionMessage.SELECTED_DIFFICULTY, difficulty.message())
     start_session = datetime.now()
     session_result = run(user_complexity=difficulty)
@@ -188,11 +188,11 @@ def handle_session(session: Session) -> None:
             print("Скоро...")
 
 
-class Menu(Enum):
-    MAIN = MainMenu
-    AUTHORIZATION = MainMenu.AUTHORIZATION
-    REGISTRATION = MainMenu.REGISTRATION
-    SESSION = SessionMenu
+class Menu(StrEnum):
+    MAIN = "MAIN"
+    AUTHORIZATION = "AUTHORIZATION"
+    REGISTRATION = "REGISTRATION"
+    SESSION = "SESSION"
 
 
 ATTEMPTS = 5
