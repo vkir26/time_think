@@ -1,4 +1,5 @@
 import os
+from argon2 import PasswordHasher
 from dotenv import load_dotenv
 from dataclasses import dataclass
 from app.database import connect_db, Request
@@ -6,6 +7,7 @@ from datetime import datetime, timezone, timedelta
 from jose import jwt
 
 ALGORITHM = "HS256"
+PASSWORD_HASHER = PasswordHasher()
 
 
 def jwt_secret_key() -> str:
