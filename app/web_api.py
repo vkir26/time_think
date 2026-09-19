@@ -260,6 +260,46 @@ def add_statistics(
     )
 
 
+class StatisticItem(BaseModel):
+    session_start: str
+    session_end: str
+    difficulty: str
+    correct: int
+    incorrect: int
+
+
+class MyStatsResponse(BaseModel):
+    items: list[StatisticItem]
+    total: int
+    page: int
+    page_size: int
+
+
+@router_v1.get("/my_stats")
+def show_my_stats(
+    user_id: str = Depends(get_current_user_id), page: int = 1, page_size: int = 10
+) -> MyStatsResponse:
+    user_statistics = StatisticsStorage().get_my_statistics(
+        user_id=user_id, limit=page_size, offset=(page - 1) * page_size
+    )
+    items = [
+        StatisticItem(
+            session_start=stat.session_start,
+            session_end=stat.session_end,
+            difficulty=stat.difficulty,
+            correct=stat.correct,
+            incorrect=stat.incorrect,
+        )
+        for stat in user_statistics
+    ]
+    return MyStatsResponse(
+        items=items,
+        total=StatisticsStorage().count_by_user(user_id=user_id),
+        page=page,
+        page_size=page_size,
+    )
+
+
 @router_v1.post("/answer")
 def answer(
     user_answer: SessionAnswer, user_id: str = Depends(get_current_user_id)

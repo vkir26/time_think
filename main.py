@@ -158,7 +158,9 @@ def play_game(user_id: str) -> None:
 
 
 def show_my_statistics(user_id: str) -> None:
-    user_statistics = StatisticsStorage().get_my_statistics(user_id=user_id)
+    user_statistics = StatisticsStorage().get_my_statistics(
+        user_id=user_id, limit=100, offset=0
+    )
     if len(user_statistics) > 0:
         print(SessionMessage.STATISTICS_HEADER)
         for numbering, user in enumerate(user_statistics, 1):
