@@ -6,6 +6,7 @@ from enum import StrEnum
 
 from app.core import get_task, Task
 from app.session import ModeSelection, difficulty_parameters, SessionParameters
+from app.game_statistics import StatisticsStorage, UserStatistic
 from app.messages import MenuMessage, RegisterMessage, AuthMessage, SessionMessage
 
 from auth.config import (
@@ -18,7 +19,9 @@ from auth.config import (
 from auth.registration import register, name_is_exist
 from auth.authorization import authenticate
 from jose import jwt, JWTError
+from datetime import datetime
 from app.database import connect_db, Request
+from typing import Any
 
 app = FastAPI()
 
@@ -151,17 +154,20 @@ def start_session(
 
     difficulty_level = difficulty_parameters[mode.difficulty]
     session = SessionData(question=get_task(), difficulty=difficulty_level)
+    session_start = str(datetime.now())
     request = Request(
-        query=""" INSERT INTO game_sessions (user_id, task, correct_answer, rounds, lives, is_active)
-                  VALUES (?, ?, ?, ?, ?, ?)
+        query=""" INSERT INTO game_sessions (user_id, task, correct_answer, difficulty, rounds, lives, is_active, started_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
               """,
         param=(
             user_id,
             session.question.task,
             session.question.correct_answer.answer,
+            mode.difficulty.name,
             session.difficulty.rounds,
             session.difficulty.lives,
             SessionStatus.ACTIVE,
+            session_start,
         ),
     )
     connect_db(request=request)
@@ -179,14 +185,16 @@ class SessionAnswer(BaseModel):
 class UserSession(BaseModel):
     task: str
     correct_answer: int
+    difficulty: str
     rounds: int
     lives: int
     correct_answers: int
     wrong_answers: int
     question_counter: int
+    started_at: str
 
 
-def session_validate(session_data: tuple[str, int]) -> UserSession:
+def session_validate(session_data: tuple[Any, ...]) -> UserSession:
     session_fields = list(UserSession.model_fields.keys())
     if len(session_data) != len(session_fields):
         raise ValueError("Некорректные данные сессии")
@@ -232,12 +240,72 @@ def session_end(user_id: str) -> None:
     connect_db(request=request)
 
 
+def add_statistics(
+    user_id: str,
+    session_start: str,
+    session_end: str,
+    difficulty: str,
+    correct_answers: int,
+    wrong_answers: int,
+) -> None:
+    StatisticsStorage().write_statistics(
+        UserStatistic(
+            user_id=user_id,
+            session_start=session_start,
+            session_end=session_end,
+            difficulty=difficulty,
+            correct=correct_answers,
+            incorrect=wrong_answers,
+        )
+    )
+
+
+class StatisticItem(BaseModel):
+    session_start: str
+    session_end: str
+    difficulty: str
+    correct: int
+    incorrect: int
+
+
+class MyStatsResponse(BaseModel):
+    items: list[StatisticItem]
+    total: int
+    page: int
+    page_size: int
+
+
+@router_v1.get("/my_stats")
+def show_my_stats(
+    user_id: str = Depends(get_current_user_id), page: int = 1, page_size: int = 10
+) -> MyStatsResponse:
+    user_statistics = StatisticsStorage().get_my_statistics(
+        user_id=user_id, limit=page_size, offset=(page - 1) * page_size
+    )
+    items = [
+        StatisticItem(
+            session_start=stat.session_start,
+            session_end=stat.session_end,
+            difficulty=stat.difficulty,
+            correct=stat.correct,
+            incorrect=stat.incorrect,
+        )
+        for stat in user_statistics
+    ]
+    return MyStatsResponse(
+        items=items,
+        total=StatisticsStorage().count_by_user(user_id=user_id),
+        page=page,
+        page_size=page_size,
+    )
+
+
 @router_v1.post("/answer")
 def answer(
     user_answer: SessionAnswer, user_id: str = Depends(get_current_user_id)
 ) -> dict[str, str | int] | AnswerResponse:
     request = Request(
-        query=""" SELECT task, correct_answer, rounds, lives, correct_answers, wrong_answers, question_counter
+        query=""" SELECT task, correct_answer, difficulty, rounds, lives, correct_answers, wrong_answers, question_counter, started_at
                   FROM game_sessions
                   WHERE user_id = ?
                     AND is_active = ? """,
@@ -292,6 +360,14 @@ def answer(
 
     if session.question_counter >= session.rounds:
         session_end(user_id=user_id)
+        add_statistics(
+            user_id=user_id,
+            session_start=session.started_at,
+            session_end=str(datetime.now()),
+            difficulty=session.difficulty,
+            correct_answers=session.correct_answers,
+            wrong_answers=session.wrong_answers,
+        )
         return {
             "message": SessionMessage.END_GAME,
             "correct": session.correct_answers,
@@ -300,6 +376,14 @@ def answer(
 
     if session.wrong_answers >= session.lives:
         session_end(user_id=user_id)
+        add_statistics(
+            user_id=user_id,
+            session_start=session.started_at,
+            session_end=str(datetime.now()),
+            difficulty=session.difficulty,
+            correct_answers=session.correct_answers,
+            wrong_answers=session.wrong_answers,
+        )
         return {"message": "Закончились жизни"}
 
     return AnswerResponse(

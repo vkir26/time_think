@@ -33,12 +33,14 @@ def upgrade() -> None:
         "user_id TEXT NOT NULL,"
         "task TEXT NOT NULL,"
         "correct_answer INTEGER NOT NULL,"
+        "difficulty TEXT NOT NULL,"
         "rounds INTEGER NOT NULL,"
         "lives INTEGER NOT NULL,"
         "correct_answers INTEGER DEFAULT 0 NOT NULL,"
         "wrong_answers INTEGER DEFAULT 0 NOT NULL,"
         "question_counter INTEGER DEFAULT 0 NOT NULL,"
         "is_active INTEGER DEFAULT 0 NOT NULL,"
+        "started_at TEXT NOT NULL,"
         "FOREIGN KEY (user_id) REFERENCES users(id));"
     )
 
