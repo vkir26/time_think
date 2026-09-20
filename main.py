@@ -1,4 +1,5 @@
 from enum import Enum, StrEnum
+import math
 from dataclasses import dataclass
 from typing import Type, TypeVar
 
@@ -157,26 +158,43 @@ def play_game(user_id: str) -> None:
     )
 
 
+STATS_PAGE_SIZE = 10
+
+
 def show_my_statistics(user_id: str) -> None:
-    user_statistics = StatisticsStorage().get_my_statistics(
-        user_id=user_id, limit=100, offset=0
-    )
-    if len(user_statistics) > 0:
-        print(SessionMessage.STATISTICS_HEADER)
-        for numbering, user in enumerate(user_statistics, 1):
-            print(
-                f"{numbering}.",
-                SessionMessage.PRINT_STATISTICS.format(
-                    datetime_formatting(user.session_start),
-                    datetime_formatting(user.session_end),
-                    ModeSelection[user.difficulty].message(),
-                    user.correct,
-                    user.incorrect,
-                ),
-            )
-        print("#" * 35)
-    else:
+    total = StatisticsStorage().count_by_user(user_id=user_id)
+    if total == 0:
         print(SessionMessage.STATISTICS_NOT_FOUND)
+        return
+    max_page = math.ceil(total / STATS_PAGE_SIZE)
+    try:
+        print(
+            SessionMessage.STATISTICS_SUMMARY.format(total, max_page, STATS_PAGE_SIZE)
+        )
+        page = int(input(SessionMessage.STATISTICS_PAGE_PROMPT))
+        if page == 0:
+            return
+        elif page < 1 or page > max_page:
+            raise ValueError
+    except ValueError:
+        print(SessionMessage.STATISTICS_INVALID_PAGE)
+        return
+    print(SessionMessage.STATISTICS_HEADER)
+    offset = (page - 1) * STATS_PAGE_SIZE
+    items = StatisticsStorage().get_my_statistics(
+        user_id=user_id, limit=STATS_PAGE_SIZE, offset=offset
+    )
+    for numbering, user in enumerate(items, start=offset + 1):
+        print(
+            f"{numbering}.",
+            SessionMessage.PRINT_STATISTICS.format(
+                datetime_formatting(user.session_start),
+                datetime_formatting(user.session_end),
+                ModeSelection[user.difficulty].message(),
+                user.correct,
+                user.incorrect,
+            ),
+        )
 
 
 def handle_session(session: Session) -> None:

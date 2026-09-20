@@ -59,4 +59,7 @@ class SessionMessage(StrEnum):
     MENU_NOT_FOUND = MenuMessage.MENU_NOT_FOUND
     STATISTICS_HEADER = "Ваша статистика:"
     STATISTICS_NOT_FOUND = "Увы, статистика не найдена :("
+    STATISTICS_SUMMARY = "Всего игр: {}. Страниц: {} (по {} на странице)."
+    STATISTICS_PAGE_PROMPT = "Номер страницы (0 — назад): "
+    STATISTICS_INVALID_PAGE = "Неверный номер страницы."
     PRINT_STATISTICS = "Начало игры: {} | Окончание игры: {} | Сложность: {} | Правильных ответов: {} | Неправильных ответов: {}"
